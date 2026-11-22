@@ -37,6 +37,7 @@ def fuerza_bruta(
     preferencias: list[PreferenciaClase],
     franjas: list[Horario],
     profes: list[PreferenciaProfe],
+    bono: dict[int, float],
 ) -> tuple[int, int, float]:
     """Mejor (prioritarias, no_prioritarias, satisfaccion) probando todas las combinaciones."""
     unidas = mascara_franjas(franjas)
@@ -55,7 +56,7 @@ def fuerza_bruta(
                 valida = False
                 break
             firma |= c.mascara
-            satisf += satisfaccion_franjas(c, unidas) + satisfaccion_profesor(c, calif)
+            satisf += satisfaccion_franjas(c, unidas) + satisfaccion_profesor(c, calif) + bono.get(c.id, 0.0)
             if p.prioridad:
                 prio += 1
             else:
@@ -167,8 +168,10 @@ def test_optimo_igual_a_fuerza_bruta(semilla: int) -> None:
     preferencias = estudiantes[0].preferencias_de_clase()
     franjas = estudiantes[0].preferencias.franjas_habilitadas
     profes = estudiantes[0].preferencias.preferencia_profes
-    resultado = mejor_horario(preferencias, franjas_habilitadas=franjas, preferencia_profes=profes)
-    esperado = fuerza_bruta(preferencias, franjas, profes)
+    # Bono de compañeros aleatorio por curso (Nivel 5), también negativo.
+    bono = {c.id: rng.choice([-1.0, 0.0, 0.0, 1.0, 2.0]) for p in preferencias for c in p.clase.cursos}
+    resultado = mejor_horario(preferencias, franjas_habilitadas=franjas, preferencia_profes=profes, bono_companeros=bono)
+    esperado = fuerza_bruta(preferencias, franjas, profes, bono)
     assert resultado.puntaje[:2] == esperado[:2]
     assert resultado.puntaje[2] == pytest.approx(esperado[2])
     assert sin_cruces(resultado.cursos)

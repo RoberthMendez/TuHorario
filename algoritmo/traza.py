@@ -1,4 +1,4 @@
-"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 4).
+"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 5).
 
 Uso, desde la raíz del repo:  python -m algoritmo.traza
 (también funciona con el botón ▶ de VS Code o ``python algoritmo/traza.py``).
@@ -26,6 +26,7 @@ from algoritmo.modelos import (
     Estudiante,
     Horario,
     PreferenciaClase,
+    PreferenciaCompanero,
     PreferenciaProfe,
     PreferenciasDeEstudiante,
     Profesor,
@@ -150,7 +151,7 @@ def main() -> None:
     print(f"Entradas en la tabla: {resultado.entradas_tabla}")
     imprimir_horario("Horario final", resultado.cursos, FRANJAS)
 
-    titulo("3. Coordinación global en dos rondas")
+    titulo("3. Coordinación global: rondas y fase de mejora")
     # Etica tiene una sola sección con 2 cupos. Ana y Beto la necesitan
     # (prioritaria); Caro y Dani la quieren, pero no es prioritaria para ellos.
     # Aunque Caro y Dani salgan primero en el sorteo, los cupos son para Ana y
@@ -180,10 +181,17 @@ def main() -> None:
         estudiante(4, "Dani", False, todos_los_dias("07:00", "21:00", ("lunes", "miercoles", "jueves")),
                    [PreferenciaProfe(GOMEZ, 0), PreferenciaProfe(PEREZ, 2)]),
     ]
+    # Nivel 5: Caro quiere ver Calculo con Ana; Beto no quiere compartir clases con Dani.
+    ana, beto, caro, dani = estudiantes
+    caro.preferencias.preferencia_estudiantes = [PreferenciaCompanero(ana, CALCULO)]
+    beto.preferencias.estudiantes_restringidos = [dani]
+
     global_ = asignar_horarios(estudiantes, semilla=2026, traza=print)
     print(f"\nPrioritarias asignadas: {global_.prioritarias_asignadas}/{global_.prioritarias_solicitadas}")
     print(f"Clases asignadas: {global_.clases_asignadas}/{global_.clases_solicitadas}")
-    print(f"Satisfacción promedio por clase (franjas + profesor): {global_.satisfaccion_promedio:.2f}")
+    print(f"Puntaje global: {formato(global_.puntaje_global)}")
+    print(f"Satisfacción promedio por clase: {global_.satisfaccion_promedio:.2f}")
+    print(f"Cambios aceptados en la fase de mejora: {global_.mejoras} (en {global_.pasadas} pasadas)")
     print(f"Entradas en todas las tablas: {global_.entradas_tabla}")
 
     titulo("4. Clases y cursos disponibles")
@@ -203,6 +211,11 @@ def main() -> None:
         franjas = e.preferencias.franjas_habilitadas
         print(f"  Franjas habilitadas: {describir_franjas(franjas)}")
         print(f"  Calificaciones de profesores: {describir_profes(e.preferencias.preferencia_profes)}")
+        amigos = ", ".join(f"{p.estudiante_preferido.nombre} en {p.clase.nombre}"
+                           for p in e.preferencias.preferencia_estudiantes)
+        excluidos = ", ".join(o.nombre for o in e.preferencias.estudiantes_restringidos)
+        print(f"  Compañeros pedidos: {amigos or 'ninguno'}")
+        print(f"  Estudiantes excluidos: {excluidos or 'ninguno'}")
         faltan = ", ".join(p.clase.nombre for p in global_.no_asignadas[e.id])
         detalle = f"puntaje {formato(global_.puntajes[e.id])}" + (f", sin asignar: {faltan}" if faltan else "")
         imprimir_horario(f"Horario de {e.nombre} [{detalle}]", global_.horarios[e.id], franjas)

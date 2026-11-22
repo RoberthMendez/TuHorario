@@ -2,12 +2,14 @@
 
 Paquete independiente: no debe importar nada del backend ni de FastAPI.
 
-Implementa los Niveles 1 (clases y cupos), 2 (prioridad de clases), 3
-(franjas horarias) y 4 (profesores): PD exacta por estudiante sobre ``(índice de clase, firma
-de horas ocupadas)`` con puntaje ``(prioritarias, no_prioritarias,
-satisfaccion)``, y coordinación global en dos
-rondas (primero las prioritarias de todos, luego las no prioritarias) con los
-estudiantes en un orden sorteado con semilla.
+Implementa los Niveles 1 a 5 (clases y cupos, prioridad de clases, franjas
+horarias, profesores y compañeros):
+
+- PD exacta por estudiante sobre ``(índice de clase, firma de horas ocupadas)``
+  con puntaje ``(prioritarias, no_prioritarias, satisfaccion)``.
+- Coordinación global: orden sorteado con semilla (amigos seguidos), dos
+  rondas (primero las prioritarias de todos, luego las no prioritarias) y una
+  fase de mejora que reacomoda a cada estudiante si sube el puntaje global.
 """
 
 from algoritmo.asignacion import ResultadoAsignacion, asignar_horarios
@@ -17,6 +19,7 @@ from algoritmo.modelos import (
     Estudiante,
     Horario,
     PreferenciaClase,
+    PreferenciaCompanero,
     PreferenciaProfe,
     PreferenciasDeEstudiante,
     Profesor,
@@ -29,6 +32,7 @@ __all__ = [
     "Estudiante",
     "Horario",
     "PreferenciaClase",
+    "PreferenciaCompanero",
     "PreferenciaProfe",
     "Profesor",
     "PreferenciasDeEstudiante",

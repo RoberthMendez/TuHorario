@@ -14,9 +14,10 @@ from algoritmo.modelos import (
     Estudiante,
     Horario,
     PreferenciaClase,
+    PreferenciaCompanero,
     PreferenciaProfe,
-    Profesor,
     PreferenciasDeEstudiante,
+    Profesor,
 )
 from algoritmo.tiempo import DIAS, HORA_FIN, HORA_INICIO
 
@@ -57,6 +58,8 @@ def generar_instancia(
     prob_dia_con_franja: float = 0.7,
     num_profesores: int = 10,
     profes_calificados: int = 3,
+    prob_amigo: float = 0.2,
+    prob_exclusion: float = 0.05,
     semilla: int | None = None,
 ) -> tuple[list[Clase], list[Estudiante]]:
     rng = random.Random(semilla)
@@ -90,4 +93,25 @@ def generar_instancia(
         )
         estudiantes.append(Estudiante(id=id_estudiante, preferencias=preferencias))
 
+    _companeros_aleatorios(rng, estudiantes, prob_amigo, prob_exclusion)
     return clases, estudiantes
+
+
+def _companeros_aleatorios(
+    rng: random.Random, estudiantes: list[Estudiante], prob_amigo: float, prob_exclusion: float
+) -> None:
+    """Nivel 5: para cada clase pedida, con probabilidad ``prob_amigo`` pide como
+    compañero a otro estudiante que también la pidió; con probabilidad
+    ``prob_exclusion`` excluye a un estudiante cualquiera."""
+    por_clase: dict[int, list[Estudiante]] = {}
+    for e in estudiantes:
+        for p in e.preferencias.preferencia_clases:
+            por_clase.setdefault(p.clase.id, []).append(e)
+    for e in estudiantes:
+        for p in e.preferencias.preferencia_clases:
+            otros = [o for o in por_clase[p.clase.id] if o is not e]
+            if otros and rng.random() < prob_amigo:
+                e.preferencias.preferencia_estudiantes.append(PreferenciaCompanero(rng.choice(otros), p.clase))
+        if len(estudiantes) > 1 and rng.random() < prob_exclusion:
+            otro = rng.choice([o for o in estudiantes if o is not e])
+            e.preferencias.estudiantes_restringidos.append(otro)

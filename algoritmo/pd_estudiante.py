@@ -9,24 +9,28 @@
                            ganancia(i, c) + f(i+1, firma | m[c]) )      # inscribir el curso c
     respuesta  = f(0, firma_inicial)
 
-Roles de las restricciones (Niveles 1 a 4):
+Roles de las restricciones (Niveles 1 a 5):
 
 - Dimensión de la tabla: índice de clase ``i`` y horas ocupadas ``firma``.
 - Filtro (al construir ``opciones``): ``cupo > 0`` y profesor con
   calificación distinta de 0. En la recursión: no cruce (``firma & m[c] == 0``).
-- Término del puntaje: prioridad de la clase, franjas horarias y profesor.
+- Término del puntaje: prioridad de la clase, franjas horarias, profesor y
+  compañeros.
 
 Puntaje = ``(prioritarias, no_prioritarias, satisfaccion)``: inscribir el
 curso c de una clase prioritaria suma ``(1, 0, s_c)`` y de una no prioritaria
 ``(0, 1, s_c)``, con
 
-    s_c = franjas(c) + profesor(c)        (cada término en [0, 1], peso 1 hasta el Nivel 8)
+    s_c = franjas(c) + profesor(c) + compañeros(c)     (peso 1 cada uno hasta el Nivel 8)
 
 - ``franjas(c)``: fracción del tiempo de c dentro de las franjas habilitadas
   (``franjas.py``).
 - ``profesor(c)``: calificación del profesor / 3 (``profesores.py``).
+- ``compañeros(c)``: +1 por amigo presente, −1 por excluido presente
+  (``companeros.py``); lo calcula la coordinación global y llega en
+  ``bono_companeros``.
 
-Ambos se precalculan una vez por estudiante. Las tuplas se suman componente
+Todos se precalculan una vez por llamada. Las tuplas se suman componente
 a componente y se comparan lexicográficamente:
 
 - una prioritaria más le gana a cualquier cantidad de no prioritarias;
@@ -84,6 +88,7 @@ def mejor_horario(
     traza: Callable[[str], None] | None = None,
     franjas_habilitadas: list[Horario] | None = None,
     preferencia_profes: list[PreferenciaProfe] | None = None,
+    bono_companeros: dict[int, float] | None = None,
 ) -> ResultadoEstudiante:
     """Calcula el horario óptimo de un estudiante para las clases pedidas.
 
@@ -95,6 +100,9 @@ def mejor_horario(
     ``franjas_habilitadas`` son las franjas preferidas del estudiante
     (Nivel 3); sin ellas ese término vale 0 para todos los cursos.
     ``preferencia_profes`` son sus calificaciones a profesores (Nivel 4).
+    ``bono_companeros`` mapea id de curso → bono/penalización por compañeros
+    (Nivel 5); depende de quién ya está inscrito, así que lo calcula la
+    coordinación global (``companeros.py``).
 
     ``traza`` (opcional, p. ej. ``print``) recibe una línea por cada paso de la
     recursión; solo sirve para ver el algoritmo funcionando.
@@ -123,8 +131,9 @@ def mejor_horario(
     ]
 
     # Satisfacción de cada curso: se precalcula una vez, no en cada estado.
+    bono = bono_companeros or {}
     satisfaccion = {
-        c.id: satisfaccion_franjas(c, franjas) + satisfaccion_profesor(c, calif)
+        c.id: satisfaccion_franjas(c, franjas) + satisfaccion_profesor(c, calif) + bono.get(c.id, 0.0)
         for ops in opciones
         for c in ops
     }
@@ -174,7 +183,8 @@ def mejor_horario(
                 profe += f", calif. {nota}" if nota is not None else ", sin calificar"
                 if c in ops:
                     detalle = (f"satisf. {satisfaccion[c.id]:.2f} = franjas {satisfaccion_franjas(c, franjas):.2f}"
-                               f" + profesor {satisfaccion_profesor(c, calif):.2f}")
+                               f" + profesor {satisfaccion_profesor(c, calif):.2f}"
+                               f" + compañeros {bono.get(c.id, 0.0):g}")
                 elif cupo_restante(c) <= 0:
                     detalle = "descartado: sin cupo"
                 else:

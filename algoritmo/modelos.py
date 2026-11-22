@@ -1,7 +1,7 @@
 """Entidades de entrada del algoritmo (subconjunto de los TADs de docs/).
 
-Solo se modela lo que usan los Niveles 1 a 4 (clases, cursos, horarios, cupos,
-prioridad de cada clase, franjas habilitadas y profesores). Los niveles siguientes agregan campos (profesor, salones, preferencias…) sin
+Solo se modela lo que usan los Niveles 1 a 5 (clases, cursos, horarios, cupos,
+prioridad de cada clase, franjas habilitadas, profesores y compañeros). Los niveles siguientes agregan campos (profesor, salones, preferencias…) sin
 cambiar la recurrencia de la PD.
 
 Las horas se guardan como enteros (minutos desde la medianoche), no como texto.
@@ -121,12 +121,23 @@ class PreferenciaProfe:
 
 
 @dataclass
+class PreferenciaCompanero:
+    """Estudiante con quien se quiere compartir una clase específica (TAD PreferenciaCompañero)."""
+
+    estudiante_preferido: "Estudiante"
+    clase: Clase
+
+
+@dataclass
 class PreferenciasDeEstudiante:
     preferencia_clases: list[PreferenciaClase] = field(default_factory=list)
     # Nivel 3: franjas en las que el estudiante prefiere tener clase. Vacío = sin preferencia.
     franjas_habilitadas: list[Horario] = field(default_factory=list)
     # Nivel 4: calificaciones a profesores. Un profesor sin calificar no suma ni se descarta.
     preferencia_profes: list[PreferenciaProfe] = field(default_factory=list)
+    # Nivel 5: compañeros por clase y estudiantes con quienes no quiere compartir ninguna clase.
+    preferencia_estudiantes: list[PreferenciaCompanero] = field(default_factory=list)
+    estudiantes_restringidos: list["Estudiante"] = field(default_factory=list)
 
 
 @dataclass(eq=False)

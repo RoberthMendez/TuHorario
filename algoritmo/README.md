@@ -4,7 +4,7 @@ Módulo de Python independiente con el algoritmo de asignación de horarios de
 TuHorario. **No** importa nada del backend ni de FastAPI; el backend lo usará
 como una librería más.
 
-## Estado: Niveles 1 a 4 (clases y cupos, prioridad, franjas horarias y profesores)
+## Estado: Niveles 1 a 5 (clases y cupos, prioridad, franjas horarias, profesores y compañeros)
 
 - Puntaje por estudiante: `(prioritarias, no_prioritarias, satisfaccion)`,
   comparado lexicográficamente: una prioritaria más le gana a cualquier
@@ -16,6 +16,12 @@ como una librería más.
 - Profesor (Nivel 4): calificación de 0 a 3. Un curso con profesor calificado
   con 0 se descarta (filtro); si no, suma `calificacion / 3` a la satisfacción
   (`profesores.py`). Profesor sin calificar: suma 0.
+- Compañeros (Nivel 5): en cada curso, +1 por amigo pedido para esa clase que
+  ya está inscrito, +1 por quien lo pidió a él, −1 por cada excluido presente
+  (en ambas direcciones) (`companeros.py`). Los amigos se procesan seguidos.
+- Fase de mejora (Nivel 5): al final, cada estudiante libera sus cupos,
+  recalcula su PD con todas sus clases y los demás fijos, y se acepta si sube
+  el puntaje global. Hasta `pasadas_mejora` pasadas (5 por defecto).
 - Dos rondas globales: primero todos inscriben sus prioritarias; después sus
   no prioritarias, sin cruzarse con lo ya inscrito.
 - `python traza.py` muestra el algoritmo paso a paso.
@@ -26,8 +32,9 @@ como una librería más.
 | `modelos.py` | `Horario`, `Curso`, `Clase`, `PreferenciaClase`, `PreferenciasDeEstudiante`, `Estudiante` (según los TADs). |
 | `franjas.py` | Satisfacción de cada curso según las franjas habilitadas (Nivel 3). |
 | `profesores.py` | Filtro de profesor vetado y satisfacción por calificación (Nivel 4). |
+| `companeros.py` | Bono de amigos / penalización de excluidos y orden por componentes (Nivel 5). |
 | `pd_estudiante.py` | `mejor_horario`: PD exacta `f(i, firma)` por estudiante. |
-| `asignacion.py` | `asignar_horarios`: orden sorteado con semilla y dos rondas (prioritarias / no prioritarias). |
+| `asignacion.py` | `asignar_horarios`: orden sorteado con semilla, dos rondas (prioritarias / no prioritarias) y fase de mejora. |
 | `traza.py` | Ejemplo que imprime cada paso de la PD y de las rondas. |
 | `generador.py` | Instancias sintéticas con semilla, para tests y experimentos. |
 
