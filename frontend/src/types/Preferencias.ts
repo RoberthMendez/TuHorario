@@ -1,3 +1,4 @@
+import type { Estudiante } from './Estudiante'
 import type { Dia } from './Horario'
 
 // Colores pastel del diseño para clases, filas y tarjetas (solo vista).
@@ -25,10 +26,15 @@ export interface PreferenciaClase {
   color: ColorPastel
 }
 
-// TAD Profesor (docs/), solo los campos que muestra la vista.
+export type Genero = 'femenino' | 'masculino'
+
+// TAD Profesor (docs/), solo los campos que muestra la vista. `genero` elige
+// el avatar; `idsClases` son las clases que dicta (para filtrar y colorear).
 export interface Profesor {
   id: number
   nombre: string
+  genero: Genero
+  idsClases: number[]
 }
 
 // TAD Preferencia de Profesor: 0 = no quiere verlo, 3 = prioridad máxima.
@@ -37,6 +43,16 @@ export type NivelPreferencia = 0 | 1 | 2 | 3
 export interface PreferenciaProfe {
   profesor: Profesor
   preferencia: NivelPreferencia
+}
+
+// Compañero: un Estudiante (TAD) con los datos que muestra la búsqueda.
+export type Companero = Pick<Estudiante, 'id' | 'nombre' | 'correo'>
+
+// TAD Preferencias De Compañero: con quién se quiere ver una clase concreta
+// (una preferencia por cada par compañero–clase).
+export interface PreferenciaCompanero {
+  estudiantePreferido: Companero
+  clase: Clase
 }
 
 // TAD Prioridad Preferencias: 1 = más importante.

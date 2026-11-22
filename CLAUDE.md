@@ -17,7 +17,7 @@ documento de la primera entrega, con los TADs, está en `docs/`.
 
 ## Estructura
 
-- `frontend/src/` — `assets/`, `components/`, `pages/`, `types/`, `data/` (mocks), `styles/`.
+- `frontend/src/` — `assets/`, `components/`, `pages/`, `types/`, `data/` (mocks), `services/` (acceso a la API), `styles/`.
 - `backend/app/` — `api/`, `core/` (config), `models/`, `schemas/`, `services/`, `db/`, `main.py`.
 - `backend/tests/` — tests con pytest.
 - `algoritmo/` — paquete Python con su propio `tests/`; no importa nada del backend ni de FastAPI.
@@ -48,6 +48,13 @@ cd algoritmo && pytest
 ## Reglas de trabajo
 
 - Por ahora solo front con datos mock hardcodeados (en `frontend/src/data/`).
+- Los datos que vendrán del backend se piden siempre a través de un servicio
+  en `frontend/src/services/` (`<recurso>Service.ts`, p. ej.
+  `clasesService.obtenerClases()`), nunca importando el mock directamente
+  desde un componente. Mientras el endpoint no exista, el servicio devuelve el
+  mock con `simularRespuesta` (`services/simulacion.ts`) y deja comentada la
+  llamada real con `obtenerJson` (`services/api.ts`, URL base en
+  `VITE_API_URL`, ver `frontend/.env.example`).
 - El backend y el algoritmo se desarrollan por separado.
 - Usar Tailwind CSS para estilos.
 - En el frontend, mantener la configuración por defecto de la plantilla de Vite (oxlint, versiones de TypeScript, tsconfig); no reemplazarla por otras herramientas.
@@ -81,6 +88,14 @@ cd algoritmo && pytest
   ya exista si coincide con el diseño.
 - Colores, tipografías y sombras del diseño se definen como variables del tema
   de Tailwind en `src/styles/tema.css`, no como valores sueltos.
+- Las ventanas emergentes para elegir varios elementos (añadir clases,
+  profesores…) se construyen sobre `ModalSeleccion` de
+  `pages/preferencias/panelPreferencias/modalSeleccion/`: cada una solo define
+  sus textos, el servicio que consulta, en qué textos se busca y cómo se ven
+  su fila y su chip.
+- Las preferencias dependen de las clases elegidas: el estado de las clases
+  vive en `PanelPreferencias` y se pasa a las secciones que lo necesitan; el
+  color de un elemento ligado a una clase es el de esa clase (`colorDeClase`).
 - Todo botón con el estilo 3D (sombra sólida debajo) usa la utilidad
   `boton-3d` de `tema.css`: se levanta al pasar el mouse y se hunde al
   presionarlo. Solo se mueve el botón completo, no su contenido.

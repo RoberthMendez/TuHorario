@@ -1,7 +1,15 @@
 import iconoSinHuecos from '../../../../assets/franjas/icono-sin-huecos.svg'
 import Interruptor from '../Interruptor'
 
-export default function HorarioSinHuecos() {
+interface HorarioSinHuecosProps {
+  activo: boolean
+  onCambiar: (activo: boolean) => void
+}
+
+export default function HorarioSinHuecos({
+  activo,
+  onCambiar,
+}: HorarioSinHuecosProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-3.25 gap-y-3 rounded-caja border-2 border-bunting bg-zircon-10 px-4 py-3.5">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-icono border-2 border-bunting bg-beeswax">
@@ -15,7 +23,12 @@ export default function HorarioSinHuecos() {
           Las clases quedan seguidas, sin horas libres entre una y otra.
         </p>
       </div>
-      <Interruptor etiqueta="Horario sin huecos" grande />
+      <Interruptor
+        etiqueta="Horario sin huecos"
+        activo={activo}
+        onCambiar={onCambiar}
+        grande
+      />
     </div>
   )
 }

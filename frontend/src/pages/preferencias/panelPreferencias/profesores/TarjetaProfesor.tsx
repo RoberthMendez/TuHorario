@@ -1,37 +1,85 @@
-import avatarNivel0 from '../../../../assets/profesores/avatar-nivel-0.svg'
-import avatarNivel1 from '../../../../assets/profesores/avatar-nivel-1.svg'
-import avatarNivel2 from '../../../../assets/profesores/avatar-nivel-2.svg'
-import avatarNivel3 from '../../../../assets/profesores/avatar-nivel-3.svg'
-import type { PreferenciaProfe } from '../../../../types/Preferencias'
-import { FONDO_AVATAR } from '../colores'
+import { useState } from 'react'
+import type {
+  NivelPreferencia,
+  PreferenciaClase,
+  PreferenciaProfe,
+} from '../../../../types/Preferencias'
+import BotonQuitar from '../BotonQuitar'
+import { FONDO_PASTEL } from '../colores'
+import AvatarProfesor from './avatarProfesor/AvatarProfesor'
 import ContadorNivel from './ContadorNivel'
-
-// Avatar ilustrado según el nivel (el de nivel 0 va en blanco y negro).
-const AVATARES = [avatarNivel0, avatarNivel1, avatarNivel2, avatarNivel3]
 
 interface TarjetaProfesorProps {
   preferencia: PreferenciaProfe
+  /** Clases del estudiante que dicta (la primera da el color). */
+  clases: PreferenciaClase[]
+  onCambiarNivel: (nivel: NivelPreferencia) => void
+  onQuitar: () => void
 }
 
-export default function TarjetaProfesor({ preferencia }: TarjetaProfesorProps) {
+const reducirMovimiento = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+// Profesor elegido: nombre, asignatura(s), su cara según el nivel (con el
+// color de su clase) y el contador para cambiar el nivel. La X lo quita con
+// un "pop" (como las clases).
+export default function TarjetaProfesor({
+  preferencia,
+  clases,
+  onCambiarNivel,
+  onQuitar,
+}: TarjetaProfesorProps) {
   const { profesor, preferencia: nivel } = preferencia
+  const [saliendo, setSaliendo] = useState(false)
+  const asignaturas = clases.map((p) => p.clase.nombre).join(' · ')
+
+  const quitar = () => {
+    if (reducirMovimiento()) onQuitar()
+    else setSaliendo(true)
+  }
 
   return (
-    <div className="group flex flex-col items-center pt-3">
-      <p className="w-full truncate text-center font-jakarta text-15 font-extrabold text-bunting">
-        {profesor.nombre}
-      </p>
+    // Al pasar el mouse la ficha no se mueve: solo aparece la X.
+    <div
+      className={`group flex cursor-default flex-col items-center pt-3 ${saliendo ? 'pointer-events-none' : ''}`}
+    >
       <div
-        className={`mt-2.5 size-23 overflow-hidden rounded-resaltado border-[1.5px] border-bunting transition-[rotate,scale] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-105 group-hover:-rotate-3 ${FONDO_AVATAR[nivel]}`}
+        onAnimationEnd={(e) => {
+          if (e.target === e.currentTarget && e.animationName === 'salir') {
+            onQuitar()
+          }
+        }}
+        className={`flex w-full flex-col items-center ${saliendo ? 'animate-salir' : ''}`}
       >
-        <img
-          src={AVATARES[nivel]}
-          alt=""
-          className={nivel === 0 ? 'size-full' : 'mx-auto size-22.25'}
-        />
-      </div>
-      <div className="mt-2.5">
-        <ContadorNivel nivel={nivel} nombre={profesor.nombre} />
+        <p className="w-full truncate text-center font-jakarta text-15 font-extrabold text-bunting">
+          {profesor.nombre}
+        </p>
+        <p
+          title={asignaturas}
+          className="w-full truncate text-center font-dm-sans text-12 font-medium text-east-bay"
+        >
+          {asignaturas}
+        </p>
+        <div className="relative mt-2.5">
+          <AvatarProfesor
+            genero={profesor.genero}
+            nivel={nivel}
+            fondo={FONDO_PASTEL[clases[0]?.color ?? 'titan-white']}
+            className="size-23 rounded-resaltado"
+          />
+          <BotonQuitar
+            etiqueta={`Quitar a ${profesor.nombre}`}
+            titulo="Quitar profesor"
+            onQuitar={quitar}
+          />
+        </div>
+        <div className="mt-2.5">
+          <ContadorNivel
+            nivel={nivel}
+            nombre={profesor.nombre}
+            onCambiar={onCambiarNivel}
+          />
+        </div>
       </div>
     </div>
   )

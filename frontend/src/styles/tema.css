@@ -83,6 +83,25 @@
   --animate-flotar: flotar 4s ease-in-out infinite;
   --animate-parpadeo: parpadeo 0.35s ease-in-out;
   --animate-titilar: titilar 1s steps(1) infinite;
+  --animate-aparecer: aparecer 0.3s ease-out both;
+  /* Sello de prioridad: baja, golpea (0.27 s), se aplasta y rebota; en el
+     golpe sale una onda y la tarjeta da un pequeño "tun". */
+  --animate-estampar: estampar 0.6s both;
+  --animate-onda: onda 0.5s ease-out 0.27s;
+  --animate-golpe: golpe 0.32s ease-out 0.27s;
+  /* Al quitar una clase: se infla un poco y desaparece encogiéndose. */
+  --animate-salir: salir 0.35s cubic-bezier(0.5, 0, 0.75, 0) both;
+  /* Entradas sin giro: el sello (para que no se mueva junto con la ficha que
+     se inclina) y los chips (para no salirse de su caja con scroll). */
+  --animate-aparecer-sello: aparecer-sello 0.2s ease-out both;
+  --animate-entrar-chip: entrar-chip 0.3s ease-out both;
+  /* Compañeros: las clases por elegir tiemblan como las apps del celular
+     cuando se van a mover; el compañero "en espera" respira con un halo; el
+     muñeco agita brazos y piernas en el aire y la caneca se sacude al recibirlo. */
+  --animate-temblar: temblar 0.3s ease-in-out infinite;
+  --animate-respirar: respirar 1.6s ease-out infinite;
+  --animate-agitar: agitar 0.14s ease-in-out infinite alternate;
+  --animate-sacudir: sacudir 0.45s ease-out;
 
   @keyframes entrar {
     from {
@@ -109,6 +128,118 @@
   @keyframes titilar {
     50% {
       opacity: 0.2;
+    }
+  }
+  @keyframes aparecer {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes estampar {
+    0% {
+      opacity: 0;
+      transform: translateY(calc(var(--u) * -26)) scale(1.9) rotate(-18deg);
+      filter: drop-shadow(
+        0 calc(var(--u) * 16) calc(var(--u) * 6) rgb(20 34 79 / 0.3)
+      );
+      animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+    }
+    15% {
+      opacity: 1;
+    }
+    45% {
+      transform: scale(0.86);
+      filter: drop-shadow(0 0 0 rgb(20 34 79 / 0));
+      animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
+    }
+    65% {
+      transform: scale(1.08);
+    }
+    82% {
+      transform: scale(0.97);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes onda {
+    from {
+      opacity: 0.9;
+      transform: scale(0.7);
+    }
+    to {
+      opacity: 0;
+      transform: scale(2.1);
+    }
+  }
+  @keyframes aparecer-sello {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+  @keyframes entrar-chip {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    60% {
+      transform: scale(1.03);
+    }
+  }
+  @keyframes temblar {
+    0%,
+    100% {
+      transform: rotate(-1.3deg);
+    }
+    50% {
+      transform: rotate(1.3deg) translateY(calc(var(--u) * -0.6));
+    }
+  }
+  @keyframes respirar {
+    from {
+      box-shadow: 0 0 0 0
+        color-mix(in srgb, var(--color-sapphire) 40%, transparent);
+    }
+    to {
+      box-shadow: 0 0 0 calc(var(--u) * 7) transparent;
+    }
+  }
+  @keyframes agitar {
+    from {
+      transform: rotate(-28deg);
+    }
+    to {
+      transform: rotate(28deg);
+    }
+  }
+  @keyframes sacudir {
+    20% {
+      transform: rotate(-12deg) scale(1.08);
+    }
+    45% {
+      transform: rotate(9deg);
+    }
+    70% {
+      transform: rotate(-5deg);
+    }
+  }
+  @keyframes salir {
+    25% {
+      transform: scale(1.08) rotate(2deg);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.2) rotate(-10deg);
+    }
+  }
+  @keyframes golpe {
+    35% {
+      transform: translateY(calc(var(--u) * 3)) scale(0.985);
+    }
+    70% {
+      transform: translateY(calc(var(--u) * -1));
     }
   }
 }
@@ -170,6 +301,8 @@
   --text-13--line-height: calc(var(--u) * 16.3);
   --text-12: calc(var(--u) * 12);
   --text-12--line-height: calc(var(--u) * 15.2);
+  --text-11: calc(var(--u) * 11);
+  --text-11--line-height: calc(var(--u) * 14);
   --tracking-etiqueta: calc(var(--u) * 0.6);
 
   /* Radios */
@@ -274,4 +407,10 @@
     border-radius: calc(var(--u) * 3);
     background: --theme(--color-east-bay);
   }
+}
+
+/* Mientras haya un modal (<dialog> abierto con showModal) la página de atrás
+   no se desplaza. */
+html:has(dialog:modal) {
+  overflow: hidden;
 }

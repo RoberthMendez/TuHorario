@@ -33,14 +33,6 @@ export const FONDO_NIVEL: Record<NivelPreferencia, string> = {
   3: 'bg-buttercup',
 }
 
-// Fondo del avatar del profesor según el nivel elegido.
-export const FONDO_AVATAR: Record<NivelPreferencia, string> = {
-  0: 'bg-mischka',
-  1: 'bg-mountain-meadow',
-  2: 'bg-buttercup',
-  3: 'bg-crusta',
-}
-
 // Pastel + acento de cada bloque de la lista de prioridades (en orden).
 export const COLORES_PRIORIDAD = [
   { fondo: 'bg-beeswax', numero: 'bg-buttercup' },
@@ -49,4 +41,40 @@ export const COLORES_PRIORIDAD = [
   { fondo: 'bg-tuft-bush', numero: 'bg-crusta' },
   { fondo: 'bg-carousel-pink', numero: 'bg-hopbush' },
   { fondo: 'bg-mabel', numero: 'bg-pelorous' },
+]
+
+// Color pastel fijo de cada clase según su id (el mismo en el modal y en la
+// ficha de "Clases del semestre").
+const COLORES_CLASE = Object.keys(FONDO_PASTEL) as ColorPastel[]
+
+export function colorDeClase(id: number): ColorPastel {
+  const n = COLORES_CLASE.length
+  return COLORES_CLASE[((id % n) + n) % n]
+}
+
+// Color de las iniciales de cada compañero elegido: así dos con las mismas
+// iniciales se distinguen, y cada uno se ve igual en todas sus clases.
+// Acentos con buen contraste para el texto índigo.
+export const FONDO_COMPANERO = [
+  'bg-buttercup',
+  'bg-mountain-meadow',
+  'bg-ship-cove',
+  'bg-crusta',
+  'bg-hopbush',
+  'bg-pelorous',
+  'bg-sahara',
+  'bg-periwinkle-gray',
+]
+
+// Lo mismo, como relleno de SVG (la camiseta de la personita que se lleva
+// a la caneca al restringir), en el mismo orden que FONDO_COMPANERO.
+export const RELLENO_COMPANERO = [
+  'fill-buttercup',
+  'fill-mountain-meadow',
+  'fill-ship-cove',
+  'fill-crusta',
+  'fill-hopbush',
+  'fill-pelorous',
+  'fill-sahara',
+  'fill-periwinkle-gray',
 ]
