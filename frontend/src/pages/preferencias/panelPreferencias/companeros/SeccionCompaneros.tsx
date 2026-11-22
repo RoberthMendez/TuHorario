@@ -23,6 +23,8 @@ const reducirMovimiento = () =>
 interface SeccionCompanerosProps {
   /** Clases del estudiante: con cada compañero se eligen entre estas. */
   clases: PreferenciaClase[]
+  /** Quita esta preferencia del estudiante. */
+  onQuitar: () => void
 }
 
 /*
@@ -31,7 +33,10 @@ interface SeccionCompanerosProps {
  * caneca) o se eligen las clases para verlo y se confirma con "Listo".
  * Tocar las iniciales de alguien en una clase lo vuelve a abrir para editar.
  */
-export default function SeccionCompaneros({ clases }: SeccionCompanerosProps) {
+export default function SeccionCompaneros({
+  clases,
+  onQuitar,
+}: SeccionCompanerosProps) {
   const [preferencias, setPreferencias] = useState<PreferenciaCompanero[]>([])
   const [restringidos, setRestringidos] = useState<Companero[]>([])
   const [enEspera, setEnEspera] = useState<Companero | null>(null)
@@ -163,6 +168,7 @@ export default function SeccionCompaneros({ clases }: SeccionCompanerosProps) {
     <SeccionPreferencia
       icono={iconoSeccion}
       titulo="Compañeros"
+      onQuitar={onQuitar}
       descripcion="Busca a un compañero y elige con qué clases quieres verlo. Si no quieres coincidir con él o ella en ninguna clase, restríngelo."
       insignia={
         <VerRestringidos

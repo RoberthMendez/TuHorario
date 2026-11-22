@@ -17,6 +17,8 @@ const NIVEL_INICIAL: NivelPreferencia = 2
 interface SeccionProfesoresProps {
   /** Clases del estudiante: definen qué profesores se pueden elegir. */
   clases: PreferenciaClase[]
+  /** Quita esta preferencia del estudiante. */
+  onQuitar: () => void
 }
 
 /*
@@ -24,7 +26,10 @@ interface SeccionProfesoresProps {
  * añaden desde un modal (varios a la vez), igual que las clases. Si se quita
  * una clase, sus profesores se ocultan (y vuelven si se agrega de nuevo).
  */
-export default function SeccionProfesores({ clases }: SeccionProfesoresProps) {
+export default function SeccionProfesores({
+  clases,
+  onQuitar,
+}: SeccionProfesoresProps) {
   const [profesores, setProfesores] = useState<PreferenciaProfe[]>([])
   const [modalAbierto, setModalAbierto] = useState(false)
 
@@ -57,6 +62,7 @@ export default function SeccionProfesores({ clases }: SeccionProfesoresProps) {
     <SeccionPreferencia
       icono={iconoSeccion}
       titulo="Profesores"
+      onQuitar={onQuitar}
       descripcion="Añade profesores de las clases que elegiste y califícalos de 0 a 3."
       descripcionGrande
     >
