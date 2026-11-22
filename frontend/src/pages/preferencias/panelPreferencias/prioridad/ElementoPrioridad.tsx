@@ -9,8 +9,6 @@ interface ElementoPrioridadProps {
   /** Se está arrastrando: va levantado e inclinado. */
   arrastrando: boolean
   onPointerDown: (e: PointerEvent<HTMLDivElement>) => void
-  onPointerMove: (e: PointerEvent<HTMLDivElement>) => void
-  onPointerUp: () => void
   onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void
 }
 
@@ -25,8 +23,6 @@ export default function ElementoPrioridad({
   colores,
   arrastrando,
   onPointerDown,
-  onPointerMove,
-  onPointerUp,
   onKeyDown,
 }: ElementoPrioridadProps) {
   return (
@@ -36,9 +32,6 @@ export default function ElementoPrioridad({
       aria-roledescription="elemento arrastrable"
       aria-label={`${prioridad.tipoPreferencia}: puesto ${prioridad.prioridad} de ${total}. Usa las flechas arriba y abajo para moverlo.`}
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
       onKeyDown={onKeyDown}
       className={`relative flex min-h-15.75 items-center gap-3.5 rounded-caja border-2 border-bunting py-2 pr-6.5 pl-3.5 select-none focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-sapphire ${colores.fondo} ${
         arrastrando

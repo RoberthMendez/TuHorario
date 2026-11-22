@@ -1,9 +1,14 @@
 import iconoNuevoEstudiante from '../../assets/icono-nuevo-estudiante.svg'
 
-export default function NuevoEstudiante() {
+interface NuevoEstudianteProps {
+  onClick: () => void
+}
+
+export default function NuevoEstudiante({ onClick }: NuevoEstudianteProps) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="group flex min-h-26.25 w-full cursor-pointer items-center gap-4.5 rounded-resaltado border-3 border-dashed border-sapphire bg-white px-6 py-4 text-left transition-[translate,background-color] duration-200 hover:-translate-y-0.5 hover:bg-zircon-10"
     >
       <span className="flex size-15 shrink-0 items-center justify-center rounded-full border-2 border-bunting bg-buttercup shadow-base-5">

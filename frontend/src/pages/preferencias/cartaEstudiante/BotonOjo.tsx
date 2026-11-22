@@ -7,7 +7,8 @@ interface BotonOjoProps {
 }
 
 // Ojo junto al nombre: muestra/oculta los datos del estudiante. Parpadea al
-// tocarlo y, con los datos ocultos, aparece tachado.
+// tocarlo y, con los datos ocultos, aparece tachado (la raya, con la misma
+// opacidad que el ojo, queda del mismo gris).
 export default function BotonOjo({ visible, onClick }: BotonOjoProps) {
   const [parpadeos, setParpadeos] = useState(0)
 
@@ -36,7 +37,7 @@ export default function BotonOjo({ visible, onClick }: BotonOjoProps) {
       />
       <span
         aria-hidden
-        className={`absolute h-0.5 w-6 rotate-45 rounded-full bg-bunting transition-[scale] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
+        className={`absolute h-0.5 w-6 rotate-45 rounded-full bg-bunting opacity-50 transition-[scale] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
           visible ? 'scale-x-0' : 'scale-x-100'
         }`}
       />

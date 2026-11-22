@@ -102,6 +102,8 @@
   --animate-respirar: respirar 1.6s ease-out infinite;
   --animate-agitar: agitar 0.14s ease-in-out infinite alternate;
   --animate-sacudir: sacudir 0.45s ease-out;
+  /* "Así no": la carta de un estudiante sin nombre niega de lado a lado. */
+  --animate-negar: negar 0.42s ease-in-out;
 
   @keyframes entrar {
     from {
@@ -212,6 +214,16 @@
     }
     to {
       transform: rotate(28deg);
+    }
+  }
+  @keyframes negar {
+    20%,
+    60% {
+      transform: translateX(calc(var(--u) * -9));
+    }
+    40%,
+    80% {
+      transform: translateX(calc(var(--u) * 7));
     }
   }
   @keyframes sacudir {
