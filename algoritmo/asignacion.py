@@ -1,4 +1,4 @@
-"""Coordinación global (Niveles 1 a 7).
+"""Coordinación global (Niveles 1 a 8).
 
 1. Orden: sorteo con semilla, reordenado para que los estudiantes de cada
    componente conexa del grafo de amistad queden seguidos (así los amigos se
@@ -38,6 +38,7 @@ from algoritmo.cercania import Campus, penalizacion_cursos
 from algoritmo.companeros import construir_red, ordenar_por_componentes, satisfaccion_companeros
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
 from algoritmo.huecos import penalizacion_huecos
+from algoritmo.pesos import calcular_pesos
 from algoritmo.modelos import Curso, Estudiante, PreferenciaClase
 from algoritmo.pd_estudiante import CERO, Puntaje, formato, mejor_horario, sumar
 from algoritmo.profesores import calificaciones, satisfaccion_profesor
@@ -113,6 +114,7 @@ def asignar_horarios(
     clase_del_curso = {e.id: {c.id: p for p in preferencias[e.id] for c in p.clase.cursos} for e in estudiantes}
     franjas = {e.id: mascara_franjas(e.preferencias.franjas_habilitadas) for e in estudiantes}
     calif = {e.id: calificaciones(e.preferencias.preferencia_profes) for e in estudiantes}
+    pesos = {e.id: calcular_pesos(e.preferencias.prioridad_preferencias) for e in estudiantes}
 
     cupos: dict[int, int] = {}
     for e in estudiantes:
@@ -166,12 +168,14 @@ def asignar_horarios(
             cursos_fijos=horarios[e.id],
             campus=campus,
             preferencia_sin_huecos=e.preferencias.preferencia_sin_huecos,
+            pesos=pesos[e.id],
         )
         entradas += resultado.entradas_tabla
         return resultado
 
     def puntaje_de(e_id: int) -> Puntaje:
         """Puntaje de un estudiante con los horarios actuales de todos."""
+        w = pesos[e_id]
         prio = no_prio = 0
         satisf = 0.0
         for c in horarios[e_id]:
@@ -179,17 +183,17 @@ def asignar_horarios(
             prio += p.prioridad
             no_prio += not p.prioridad
             satisf += (
-                satisfaccion_franjas(c, franjas[e_id])
-                + satisfaccion_profesor(c, calif[e_id])
-                + satisfaccion_companeros(e_id, p.clase.id, inscritos[c.id] - {e_id}, red)
+                w.horarios * satisfaccion_franjas(c, franjas[e_id])
+                + w.profesores * satisfaccion_profesor(c, calif[e_id])
+                + w.estudiantes * satisfaccion_companeros(e_id, p.clase.id, inscritos[c.id] - {e_id}, red)
             )
         if por_id[e_id].preferencias.preferencia_cercania:
-            satisf -= penalizacion_cursos(horarios[e_id], campus)
+            satisf -= w.cercania * penalizacion_cursos(horarios[e_id], campus)
         if por_id[e_id].preferencias.preferencia_sin_huecos:
             mascara = 0
             for c in horarios[e_id]:
                 mascara |= c.mascara
-            satisf -= penalizacion_huecos(mascara)
+            satisf -= w.huecos * penalizacion_huecos(mascara)
         return (prio, no_prio, satisf)
 
     def puntaje_de_grupo(ids: set[int]) -> Puntaje:

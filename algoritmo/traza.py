@@ -1,4 +1,4 @@
-"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 7).
+"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 8).
 
 Uso, desde la raíz del repo:  python -m algoritmo.traza
 (también funciona con el botón ▶ de VS Code o ``python algoritmo/traza.py``).
@@ -30,10 +30,12 @@ from algoritmo.modelos import (
     PreferenciaCompanero,
     PreferenciaProfe,
     PreferenciasDeEstudiante,
+    PrioridadPreferencia,
     Profesor,
     Salon,
 )
 from algoritmo.pd_estudiante import formato, mejor_horario
+from algoritmo.pesos import Pesos, calcular_pesos
 from algoritmo.tiempo import DIAS, HORA_FIN, HORA_INICIO, bloques_de, describir_mascara, numero_de_bloque
 
 
@@ -145,6 +147,25 @@ PROFES = [
 CERCANIA = True
 # Nivel 7: también pide un horario sin huecos.
 SIN_HUECOS = True
+# Nivel 8: ranking de preferencias (1 = la más importante). Con este orden el
+# profesor pesa más que la cercanía, así que vuelve a ganar Calculo-D.
+RANKING = [
+    PrioridadPreferencia("profesores", 1),
+    PrioridadPreferencia("horarios", 2),
+    PrioridadPreferencia("huecos", 3),
+    PrioridadPreferencia("cercania", 4),
+]
+
+
+def describir_ranking(ranking: list[PrioridadPreferencia]) -> str:
+    if not ranking:
+        return "sin ranking (todas pesan 1)"
+    return " > ".join(p.tipo_preferencia for p in sorted(ranking, key=lambda p: p.prioridad))
+
+
+def describir_pesos(w: Pesos) -> str:
+    return (f"horarios {w.horarios:.2f}, profesores {w.profesores:.2f}, estudiantes {w.estudiantes:.2f}, "
+            f"cercania {w.cercania:.2f}, huecos {w.huecos:.2f}")
 
 
 def titulo(texto: str) -> None:
@@ -167,9 +188,12 @@ def main() -> None:
     print(f"Calificaciones de profesores: {describir_profes(PROFES)}")
     print(f"Cercanía: {'sí' if CERCANIA else 'no'}")
     print(f"Sin huecos: {'sí' if SIN_HUECOS else 'no'}")
+    print(f"Ranking: {describir_ranking(RANKING)}")
+    print(f"Pesos: {describir_pesos(calcular_pesos(RANKING))}")
     print()
     resultado = mejor_horario(PREFERENCIAS, traza=print, franjas_habilitadas=FRANJAS, preferencia_profes=PROFES,
-                              preferencia_cercania=CERCANIA, preferencia_sin_huecos=SIN_HUECOS)
+                              preferencia_cercania=CERCANIA, preferencia_sin_huecos=SIN_HUECOS,
+                              pesos=calcular_pesos(RANKING))
     print(f"\nPuntaje (prioritarias, no prioritarias, satisfacción): {formato(resultado.puntaje)}")
     print(f"Horario: {[c.codigo for c in resultado.cursos]}")
     print(f"Entradas en la tabla: {resultado.entradas_tabla}")
@@ -213,6 +237,11 @@ def main() -> None:
     dani.preferencias.preferencia_cercania = True
     # Nivel 7: Beto pide un horario sin huecos.
     beto.preferencias.preferencia_sin_huecos = True
+    # Nivel 8: para Ana lo más importante es el profesor y después las franjas.
+    ana.preferencias.prioridad_preferencias = [
+        PrioridadPreferencia("profesores", 1),
+        PrioridadPreferencia("horarios", 2),
+    ]
 
     global_ = asignar_horarios(estudiantes, semilla=2026, traza=print)
     print(f"\nPrioritarias asignadas: {global_.prioritarias_asignadas}/{global_.prioritarias_solicitadas}")
@@ -246,6 +275,7 @@ def main() -> None:
         print(f"  Estudiantes excluidos: {excluidos or 'ninguno'}")
         print(f"  Cercanía: {'sí' if e.preferencias.preferencia_cercania else 'no'}")
         print(f"  Sin huecos: {'sí' if e.preferencias.preferencia_sin_huecos else 'no'}")
+        print(f"  Ranking: {describir_ranking(e.preferencias.prioridad_preferencias)}")
         faltan = ", ".join(p.clase.nombre for p in global_.no_asignadas[e.id])
         detalle = f"puntaje {formato(global_.puntajes[e.id])}" + (f", sin asignar: {faltan}" if faltan else "")
         imprimir_horario(f"Horario de {e.nombre} [{detalle}]", global_.horarios[e.id], franjas)

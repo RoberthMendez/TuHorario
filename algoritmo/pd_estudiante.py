@@ -13,7 +13,7 @@ edificio (sin cercanía es siempre ``()`` y el estado es el mismo de antes)::
 
 con ``firma ⊕ c = (mascara | m[c], edificios + sesiones de c, ordenada)``.
 
-Roles de las restricciones (Niveles 1 a 7):
+Roles de las restricciones (Niveles 1 a 8):
 
 - Dimensión de la tabla: índice de clase ``i``, horas ocupadas ``mascara`` y
   edificios de cada sesión (solo con cercanía).
@@ -26,19 +26,22 @@ Puntaje = ``(prioritarias, no_prioritarias, satisfaccion)``: inscribir el
 curso c de una clase prioritaria suma ``(1, 0, s_c)`` y de una no prioritaria
 ``(0, 1, s_c)``, con
 
-    s_c = franjas(c) + profesor(c) + compañeros(c)     (peso 1 cada uno hasta el Nivel 8)
+    s_c = w_h · franjas(c) + w_p · profesor(c) + w_e · compañeros(c)
 
 - ``franjas(c)``: fracción del tiempo de c dentro de las franjas habilitadas
-  (``franjas.py``).
-- ``profesor(c)``: calificación del profesor / 3 (``profesores.py``).
-- ``compañeros(c)``: +1 por amigo presente, −1 por excluido presente
-  (``companeros.py``); lo calcula la coordinación global y llega en
-  ``bono_companeros``.
+  (``franjas.py``), en [0, 1].
+- ``profesor(c)``: calificación del profesor / 3 (``profesores.py``), en [0, 1].
+- ``compañeros(c)``: fracción de amigos presentes − fracción de excluidos
+  presentes (``companeros.py``), en [−1, 1]; lo calcula la coordinación
+  global y llega en ``bono_companeros``.
 
 Esos tres se precalculan una vez por llamada. La cercanía y los huecos no son
 por curso (dependen de qué clase va junto a cuál), así que se restan en el
-caso base (``cercania.py`` y ``huecos.py``). Los huecos solo dependen de la
-máscara, que ya está en el estado: no agrandan la tabla.
+caso base, también ponderados (``cercania.py`` y ``huecos.py``). Los huecos
+solo dependen de la máscara, que ya está en el estado: no agrandan la tabla.
+
+Los pesos ``w`` (Nivel 8, ``pesos.py``) salen del ranking de preferencias
+del estudiante: ``2^(m − posición)``; sin ranking, todos valen 1.
 
 Las tuplas se suman componente a componente y se comparan
 lexicográficamente:
@@ -65,6 +68,7 @@ from algoritmo.cercania import Campus, Sesion, agregar, sesiones_con_edificio
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
 from algoritmo.huecos import horas_de_hueco, penalizacion_huecos
 from algoritmo.modelos import Curso, Horario, PreferenciaClase, PreferenciaProfe
+from algoritmo.pesos import PESOS_IGUALES, Pesos
 from algoritmo.profesores import calificacion_de, calificaciones, profesor_vetado, satisfaccion_profesor
 from algoritmo.tiempo import DIAS, HORA_INICIO, HORAS_POR_DIA, describir_mascara
 
@@ -106,6 +110,7 @@ def mejor_horario(
     cursos_fijos: list[Curso] | None = None,
     campus: Campus | None = None,
     preferencia_sin_huecos: bool = False,
+    pesos: Pesos | None = None,
 ) -> ResultadoEstudiante:
     """Calcula el horario óptimo de un estudiante para las clases pedidas.
 
@@ -129,6 +134,9 @@ def mejor_horario(
     Nivel 7: con ``preferencia_sin_huecos`` se penalizan las horas libres
     entre clases del mismo día (``huecos.py``), incluidas las de
     ``firma_inicial``.
+
+    Nivel 8: ``pesos`` (``pesos.py``) multiplica cada criterio de
+    satisfacción según el ranking del estudiante; sin pesos, todos valen 1.
 
     ``traza`` (opcional, p. ej. ``print``) recibe una línea por cada paso de la
     recursión; solo sirve para ver el algoritmo funcionando.
@@ -159,11 +167,18 @@ def mejor_horario(
 
     # Satisfacción de cada curso: se precalcula una vez, no en cada estado.
     bono = bono_companeros or {}
+    w = pesos or PESOS_IGUALES  # Nivel 8
     satisfaccion = {
-        c.id: satisfaccion_franjas(c, franjas) + satisfaccion_profesor(c, calif) + bono.get(c.id, 0.0)
+        c.id: w.horarios * satisfaccion_franjas(c, franjas)
+        + w.profesores * satisfaccion_profesor(c, calif)
+        + w.estudiantes * bono.get(c.id, 0.0)
         for ops in opciones
         for c in ops
     }
+    # Un criterio con peso 0 no se tiene en cuenta: si es la cercanía, ni
+    # siquiera hace falta agrandar el estado con los edificios.
+    preferencia_cercania = preferencia_cercania and w.cercania > 0
+    preferencia_sin_huecos = preferencia_sin_huecos and w.huecos > 0
 
     # Nivel 6: sesiones con edificio de cada curso (solo si pidió cercanía).
     if preferencia_cercania:
@@ -195,12 +210,12 @@ def mejor_horario(
             penalizacion = 0.0
             if preferencia_cercania and campus is not None and edificios:
                 traslados = campus.penalizacion(edificios)
-                penalizacion += traslados
-                motivos.append(f"traslados {traslados:.3g}")
+                penalizacion += w.cercania * traslados
+                motivos.append(f"traslados {traslados:.3g}" + (f" × {w.cercania:.2f}" if w.cercania != 1 else ""))
             if preferencia_sin_huecos:
                 horas = horas_de_hueco(firma)
-                penalizacion += penalizacion_huecos(firma)
-                motivos.append(f"{horas} h de hueco")
+                penalizacion += w.huecos * penalizacion_huecos(firma)
+                motivos.append(f"{horas} h de hueco" + (f" (/12 × {w.huecos:.2f})" if w.huecos != 1 else ""))
             if not motivos:
                 log(i, lambda: f"f({i}, …) = {formato(CERO)}  ← caso base: no quedan clases")
                 return CERO
@@ -248,9 +263,10 @@ def mejor_horario(
                 if preferencia_cercania and c.salones:
                     profe += ", " + "/".join(dict.fromkeys(s.edificio.nombre for s in c.salones))
                 if c in ops:
-                    detalle = (f"satisf. {satisfaccion[c.id]:.2f} = franjas {satisfaccion_franjas(c, franjas):.2f}"
-                               f" + profesor {satisfaccion_profesor(c, calif):.2f}"
-                               f" + compañeros {bono.get(c.id, 0.0):g}")
+                    detalle = (f"satisf. {satisfaccion[c.id]:.2f} = "
+                               f"{w.horarios:.2f}×franjas {satisfaccion_franjas(c, franjas):.2f}"
+                               f" + {w.profesores:.2f}×profesor {satisfaccion_profesor(c, calif):.2f}"
+                               f" + {w.estudiantes:.2f}×compañeros {bono.get(c.id, 0.0):.2g}")
                 elif cupo_restante(c) <= 0:
                     detalle = "descartado: sin cupo"
                 else:

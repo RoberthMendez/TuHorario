@@ -1,11 +1,14 @@
 """Nivel 5: preferencias de compañeros.
 
 Para el estudiante e y el curso c de la clase k, con ``P`` = estudiantes ya
-inscritos en c:
+inscritos en c, ``A`` = amigos que e pidió para k, ``B`` = quienes pidieron a
+e para k y ``X`` = excluidos de e (en ambas direcciones)::
 
-    compañeros(e, c) = BONO_AMIGO        · |amigos que e pidió para k   ∩ P|
-                     + BONO_AMIGO        · |quienes pidieron a e para k ∩ P|
-                     - PENALIZACION_EXCLUSION · |excluidos ∩ P|     (en ambas direcciones)
+    compañeros(e, c) = (|A ∩ P| + |B ∩ P|) / (|A| + |B|)  −  |X ∩ P| / |X|
+
+Cada parte es una fracción en [0, 1] (Nivel 8: todos los criterios
+normalizados), así que el término queda en [−1, 1]: 1 si están todos los
+amigos de esa clase y ningún excluido.
 
 El segundo término ("quien me pidió") hace que la ganancia de e también
 cuente lo que gana el otro al tenerlo en su sección, así la PD de e no ignora
@@ -24,9 +27,6 @@ from collections import deque
 from dataclasses import dataclass, field
 
 from algoritmo.modelos import Estudiante
-
-BONO_AMIGO = 1.0
-PENALIZACION_EXCLUSION = 1.0
 
 
 @dataclass
@@ -64,13 +64,18 @@ def construir_red(estudiantes: list[Estudiante]) -> RedCompaneros:
 
 
 def satisfaccion_companeros(e: int, clase: int, presentes: set[int], red: RedCompaneros) -> float:
-    """Bono/penalización de compañeros de e en un curso de ``clase`` con esos ``presentes``."""
+    """Bono/penalización de compañeros de e en un curso de ``clase`` con esos ``presentes`` (−1 a 1)."""
     if not presentes:
         return 0.0
-    amigos = len(red.pedidos.get((e, clase), set()) & presentes)
-    me_pidieron = len(red.pedido_por.get((e, clase), set()) & presentes)
-    excluidos = len(red.excluidos.get(e, set()) & presentes)
-    return BONO_AMIGO * (amigos + me_pidieron) - PENALIZACION_EXCLUSION * excluidos
+    pedidos = red.pedidos.get((e, clase), set())
+    me_pidieron = red.pedido_por.get((e, clase), set())
+    excluidos = red.excluidos.get(e, set())
+    valor = 0.0
+    if pedidos or me_pidieron:
+        valor += (len(pedidos & presentes) + len(me_pidieron & presentes)) / (len(pedidos) + len(me_pidieron))
+    if excluidos:
+        valor -= len(excluidos & presentes) / len(excluidos)
+    return valor
 
 
 def ordenar_por_componentes(orden: list[Estudiante], red: RedCompaneros) -> list[Estudiante]:

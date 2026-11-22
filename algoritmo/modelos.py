@@ -1,9 +1,9 @@
 """Entidades de entrada del algoritmo (subconjunto de los TADs de docs/).
 
-Solo se modela lo que usan los Niveles 1 a 7 (clases, cursos, horarios, cupos,
-prioridad de cada clase, franjas habilitadas, profesores, compañeros y
-salones/edificios). Los niveles siguientes agregan campos (profesor, salones, preferencias…) sin
-cambiar la recurrencia de la PD.
+Se modela lo que usan los Niveles 1 a 8: clases, cursos, horarios, cupos,
+prioridad de cada clase, franjas habilitadas, profesores, compañeros,
+salones/edificios, huecos y el orden de importancia de las preferencias. Cada
+nivel agregó campos sin cambiar la recurrencia de la PD.
 
 Las horas se guardan como enteros (minutos desde la medianoche), no como texto.
 Regla de negocio: las clases y franjas siempre empiezan y terminan en horas en
@@ -149,6 +149,24 @@ class PreferenciaProfe:
             raise ValueError(f"La preferencia de profesor debe estar entre 0 y {CALIFICACION_MAXIMA}")
 
 
+# Nivel 8: categorías de preferencia que el estudiante puede ordenar (TAD PrioridadPreferencias).
+TIPOS_PREFERENCIA = ("horarios", "profesores", "estudiantes", "clases", "cercania", "huecos")
+
+
+@dataclass
+class PrioridadPreferencia:
+    """Importancia que el estudiante le da a una categoría: 1 = la más importante."""
+
+    tipo_preferencia: str
+    prioridad: int
+
+    def __post_init__(self) -> None:
+        if self.tipo_preferencia not in TIPOS_PREFERENCIA:
+            raise ValueError(f"Tipo de preferencia inválido: {self.tipo_preferencia!r}. Debe ser uno de {TIPOS_PREFERENCIA}")
+        if not 1 <= self.prioridad <= len(TIPOS_PREFERENCIA):
+            raise ValueError(f"La prioridad debe estar entre 1 y {len(TIPOS_PREFERENCIA)}")
+
+
 @dataclass
 class PreferenciaCompanero:
     """Estudiante con quien se quiere compartir una clase específica (TAD PreferenciaCompañero)."""
@@ -171,6 +189,8 @@ class PreferenciasDeEstudiante:
     preferencia_cercania: bool = False
     # Nivel 7: prefiere evitar horas libres entre clases del mismo día.
     preferencia_sin_huecos: bool = False
+    # Nivel 8: orden de importancia de las preferencias. Vacío = todas pesan igual.
+    prioridad_preferencias: list[PrioridadPreferencia] = field(default_factory=list)
 
 
 @dataclass(eq=False)

@@ -4,7 +4,7 @@ Módulo de Python independiente con el algoritmo de asignación de horarios de
 TuHorario. **No** importa nada del backend ni de FastAPI; el backend lo usará
 como una librería más.
 
-## Estado: Niveles 1 a 7 (clases y cupos, prioridad, franjas horarias, profesores, compañeros, cercanía y huecos)
+## Estado: Niveles 1 a 8 (todos)
 
 - Puntaje por estudiante: `(prioritarias, no_prioritarias, satisfaccion)`,
   comparado lexicográficamente: una prioritaria más le gana a cualquier
@@ -16,9 +16,10 @@ como una librería más.
 - Profesor (Nivel 4): calificación de 0 a 3. Un curso con profesor calificado
   con 0 se descarta (filtro); si no, suma `calificacion / 3` a la satisfacción
   (`profesores.py`). Profesor sin calificar: suma 0.
-- Compañeros (Nivel 5): en cada curso, +1 por amigo pedido para esa clase que
-  ya está inscrito, +1 por quien lo pidió a él, −1 por cada excluido presente
-  (en ambas direcciones) (`companeros.py`). Los amigos se procesan seguidos.
+- Compañeros (Nivel 5): en cada curso, fracción de sus amigos de esa clase
+  (pedidos por él o que lo pidieron a él) que ya están inscritos, menos la
+  fracción de sus excluidos (en ambas direcciones) presentes, en [−1, 1]
+  (`companeros.py`). Los amigos se procesan seguidos.
 - Fase de mejora (Nivel 5): al final, cada estudiante libera sus cupos,
   recalcula su PD con todas sus clases y los demás fijos, y se acepta si sube
   el puntaje global. Hasta `pasadas_mejora` pasadas (5 por defecto).
@@ -30,6 +31,11 @@ como una librería más.
   resta `horas de hueco / 12`, con las horas de hueco de cada día =
   `(último − primero + 1) − bloques ocupados` sobre la máscara final
   (`huecos.py`). No agranda el estado.
+- Prioridad entre preferencias (Nivel 8): cada criterio está normalizado a
+  [0, 1] por unidad y se multiplica por `w = 2^(m − posición)` según el ranking
+  del estudiante (escalado para que los pesos sumen m); lo que no está en el
+  ranking pesa 0 y sin ranking todo pesa 1 (`pesos.py`). "clases" no se
+  pondera: la prioridad de clases siempre domina.
 - Dos rondas globales: primero todos inscriben sus prioritarias; después sus
   no prioritarias, sin cruzarse con lo ya inscrito.
 - `python traza.py` muestra el algoritmo paso a paso.
@@ -43,6 +49,7 @@ como una librería más.
 | `companeros.py` | Bono de amigos / penalización de excluidos y orden por componentes (Nivel 5). |
 | `cercania.py` | Sesiones con edificio, distancias entre edificios y penalización por traslados (Nivel 6). |
 | `huecos.py` | Horas de hueco por día a partir de la máscara (Nivel 7). |
+| `pesos.py` | Pesos de cada criterio según el ranking de preferencias (Nivel 8). |
 | `pd_estudiante.py` | `mejor_horario`: PD exacta `f(i, firma)` por estudiante. |
 | `asignacion.py` | `asignar_horarios`: orden sorteado con semilla, dos rondas (prioritarias / no prioritarias) y fase de mejora. |
 | `traza.py` | Ejemplo que imprime cada paso de la PD y de las rondas. |

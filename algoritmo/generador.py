@@ -18,8 +18,10 @@ from algoritmo.modelos import (
     PreferenciaCompanero,
     PreferenciaProfe,
     PreferenciasDeEstudiante,
+    PrioridadPreferencia,
     Profesor,
     Salon,
+    TIPOS_PREFERENCIA,
 )
 from algoritmo.tiempo import DIAS, HORA_FIN, HORA_INICIO
 
@@ -49,6 +51,12 @@ def _calificaciones_aleatorias(rng: random.Random, clases: list[Clase], cantidad
     return [PreferenciaProfe(p, rng.randint(0, CALIFICACION_MAXIMA)) for p in elegidos]
 
 
+def _ranking_aleatorio(rng: random.Random) -> list[PrioridadPreferencia]:
+    """Nivel 8: ordena al azar entre 1 y todas las categorías de preferencia."""
+    elegidas = rng.sample(TIPOS_PREFERENCIA, rng.randint(1, len(TIPOS_PREFERENCIA)))
+    return [PrioridadPreferencia(t, i) for i, t in enumerate(elegidas, start=1)]
+
+
 def generar_instancia(
     num_estudiantes: int,
     clases_por_estudiante: int,
@@ -65,6 +73,7 @@ def generar_instancia(
     num_edificios: int = 6,
     prob_cercania: float = 0.3,
     prob_sin_huecos: float = 0.3,
+    prob_ranking: float = 0.5,
     semilla: int | None = None,
 ) -> tuple[list[Clase], list[Estudiante]]:
     rng = random.Random(semilla)
@@ -101,6 +110,7 @@ def generar_instancia(
             _calificaciones_aleatorias(rng, elegidas, profes_calificados),
             preferencia_cercania=rng.random() < prob_cercania,
             preferencia_sin_huecos=rng.random() < prob_sin_huecos,
+            prioridad_preferencias=_ranking_aleatorio(rng) if rng.random() < prob_ranking else [],
         )
         estudiantes.append(Estudiante(id=id_estudiante, preferencias=preferencias))
 

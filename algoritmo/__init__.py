@@ -2,8 +2,9 @@
 
 Paquete independiente: no debe importar nada del backend ni de FastAPI.
 
-Implementa los Niveles 1 a 5 (clases y cupos, prioridad de clases, franjas
-horarias, profesores y compañeros):
+Implementa los Niveles 1 a 8 (clases y cupos, prioridad de clases, franjas
+horarias, profesores, compañeros, cercanía, huecos y prioridad entre
+preferencias):
 
 - PD exacta por estudiante sobre ``(índice de clase, firma de horas ocupadas)``
   con puntaje ``(prioritarias, no_prioritarias, satisfaccion)``.
@@ -22,6 +23,7 @@ from algoritmo.modelos import (
     PreferenciaCompanero,
     PreferenciaProfe,
     PreferenciasDeEstudiante,
+    PrioridadPreferencia,
     Profesor,
 )
 from algoritmo.pd_estudiante import ResultadoEstudiante, mejor_horario
@@ -36,6 +38,7 @@ __all__ = [
     "PreferenciaProfe",
     "Profesor",
     "PreferenciasDeEstudiante",
+    "PrioridadPreferencia",
     "ResultadoAsignacion",
     "ResultadoEstudiante",
     "asignar_horarios",

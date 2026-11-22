@@ -294,3 +294,19 @@ def test_ronda_2_evita_huecos_con_lo_de_la_ronda_1() -> None:
     resultado = asignar_horarios([e], semilla=0, pasadas_mejora=0)
     assert [c.codigo for c in resultado.horarios[1]] == ["K1-1", "N-seguida"]
     assert resultado.puntajes[1] == (1, 1, 0.0)
+
+
+# ---------------------------------------------------------------- Nivel 8
+
+def test_companeros_normalizado_entre_menos_uno_y_uno() -> None:
+    from algoritmo.companeros import construir_red, satisfaccion_companeros
+
+    clase = dos_secciones()
+    ana, beto, caro, dani = (estudiante(i, (clase, True)) for i in range(1, 5))
+    ana.preferencias.preferencia_estudiantes = [PreferenciaCompanero(beto, clase), PreferenciaCompanero(caro, clase)]
+    ana.preferencias.estudiantes_restringidos = [dani]
+    red = construir_red([ana, beto, caro, dani])
+    assert satisfaccion_companeros(1, clase.id, {2}, red) == 0.5  # 1 de sus 2 amigos
+    assert satisfaccion_companeros(1, clase.id, {2, 3}, red) == 1.0  # todos sus amigos
+    assert satisfaccion_companeros(1, clase.id, {4}, red) == -1.0  # su único excluido
+    assert satisfaccion_companeros(1, clase.id, {2, 3, 4}, red) == 0.0

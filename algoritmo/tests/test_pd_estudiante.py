@@ -7,8 +7,9 @@ from algoritmo.generador import generar_instancia
 from algoritmo.cercania import Campus, penalizacion_cursos
 from algoritmo.huecos import horas_de_hueco, penalizacion_huecos
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
-from algoritmo.modelos import Clase, Curso, Edificio, Horario, PreferenciaClase, PreferenciaProfe, Profesor, Salon
+from algoritmo.modelos import Clase, Curso, Edificio, Horario, PreferenciaClase, PreferenciaProfe, PrioridadPreferencia, Profesor, Salon
 from algoritmo.pd_estudiante import mejor_horario
+from algoritmo.pesos import PESOS_IGUALES, Pesos, calcular_pesos
 from algoritmo.profesores import calificaciones, profesor_vetado, satisfaccion_profesor
 
 
@@ -42,6 +43,7 @@ def fuerza_bruta(
     bono: dict[int, float],
     cercania: bool = False,
     sin_huecos: bool = False,
+    w: Pesos = PESOS_IGUALES,
 ) -> tuple[int, int, float]:
     """Mejor (prioritarias, no_prioritarias, satisfaccion) probando todas las combinaciones."""
     unidas = mascara_franjas(franjas)
@@ -61,16 +63,17 @@ def fuerza_bruta(
                 valida = False
                 break
             firma |= c.mascara
-            satisf += satisfaccion_franjas(c, unidas) + satisfaccion_profesor(c, calif) + bono.get(c.id, 0.0)
+            satisf += (w.horarios * satisfaccion_franjas(c, unidas) + w.profesores * satisfaccion_profesor(c, calif)
+                       + w.estudiantes * bono.get(c.id, 0.0))
             if p.prioridad:
                 prio += 1
             else:
                 no_prio += 1
         if valida:
             if cercania:
-                satisf -= penalizacion_cursos([c for c in combinacion if c is not None], campus)
+                satisf -= w.cercania * penalizacion_cursos([c for c in combinacion if c is not None], campus)
             if sin_huecos:
-                satisf -= penalizacion_huecos(firma)
+                satisf -= w.huecos * penalizacion_huecos(firma)
             mejor = max(mejor, (prio, no_prio, satisf))
     return mejor
 
@@ -181,10 +184,11 @@ def test_optimo_igual_a_fuerza_bruta(semilla: int) -> None:
     bono = {c.id: rng.choice([-1.0, 0.0, 0.0, 1.0, 2.0]) for p in preferencias for c in p.clase.cursos}
     cercania = rng.random() < 0.5  # Nivel 6
     sin_huecos = rng.random() < 0.5  # Nivel 7
+    w = calcular_pesos(estudiantes[0].preferencias.prioridad_preferencias)  # Nivel 8
     resultado = mejor_horario(preferencias, franjas_habilitadas=franjas, preferencia_profes=profes,
                               bono_companeros=bono, preferencia_cercania=cercania,
-                              preferencia_sin_huecos=sin_huecos)
-    esperado = fuerza_bruta(preferencias, franjas, profes, bono, cercania, sin_huecos)
+                              preferencia_sin_huecos=sin_huecos, pesos=w)
+    esperado = fuerza_bruta(preferencias, franjas, profes, bono, cercania, sin_huecos, w)
     assert resultado.puntaje[:2] == esperado[:2]
     assert resultado.puntaje[2] == pytest.approx(esperado[2])
     assert sin_cruces(resultado.cursos)
@@ -421,3 +425,81 @@ def test_sin_huecos_cuenta_las_horas_ya_ocupadas() -> None:
 def test_sin_huecos_no_agranda_la_tabla() -> None:
     prefs = instancia_ejemplo()
     assert mejor_horario(prefs, preferencia_sin_huecos=True).entradas_tabla == mejor_horario(prefs).entradas_tabla
+
+
+# ---------------------------------------------------------------- Nivel 8
+
+def test_pesos_sin_ranking_valen_uno() -> None:
+    assert calcular_pesos([]) == Pesos(1, 1, 1, 1, 1)
+
+
+def test_pesos_duplican_por_posicion_y_suman_m() -> None:
+    w = calcular_pesos([
+        PrioridadPreferencia("cercania", 1),
+        PrioridadPreferencia("profesores", 2),
+        PrioridadPreferencia("horarios", 3),
+    ])
+    # 2^(3-1), 2^(3-2), 2^(3-3) = 4, 2, 1, escalados por 3/7 para que sumen 3.
+    assert w.cercania == pytest.approx(12 / 7)
+    assert w.profesores == pytest.approx(6 / 7)
+    assert w.horarios == pytest.approx(3 / 7)
+    assert w.cercania == 2 * w.profesores == 4 * w.horarios
+    # Lo que no está en el ranking no se tiene en cuenta.
+    assert w.estudiantes == 0 and w.huecos == 0
+
+
+def test_ranking_usa_el_orden_no_el_numero() -> None:
+    # Prioridades 2 y 5 (con huecos en la numeración) equivalen a 1 y 2.
+    a = calcular_pesos([PrioridadPreferencia("horarios", 2), PrioridadPreferencia("huecos", 5)])
+    b = calcular_pesos([PrioridadPreferencia("horarios", 1), PrioridadPreferencia("huecos", 2)])
+    assert a == b
+
+
+def test_ranking_invalido() -> None:
+    with pytest.raises(ValueError):
+        PrioridadPreferencia("colores", 1)
+    with pytest.raises(ValueError):
+        PrioridadPreferencia("horarios", 7)
+    with pytest.raises(ValueError):
+        calcular_pesos([PrioridadPreferencia("horarios", 1), PrioridadPreferencia("horarios", 2)])
+
+
+def test_el_ranking_decide_entre_profesor_y_franja() -> None:
+    # A-1: profesor calificado 3 pero fuera de la franja; A-2: dentro de la franja, sin calificar.
+    p3 = Profesor(1, "P3")
+    clase = Clase(1, "A", "A", [
+        Curso(1, "A-1", 5, [Horario.crear("lunes", "07:00", "09:00")], p3),
+        Curso(2, "A-2", 5, [Horario.crear("martes", "07:00", "09:00")]),
+    ])
+    prefs = [PreferenciaClase(clase)]
+    franjas = [Horario.crear("martes", "07:00", "12:00")]
+    profes = [PreferenciaProfe(p3, 3)]
+
+    def elegido(*ranking: str) -> str:
+        w = calcular_pesos([PrioridadPreferencia(t, i) for i, t in enumerate(ranking, start=1)])
+        r = mejor_horario(prefs, franjas_habilitadas=franjas, preferencia_profes=profes, pesos=w)
+        return r.cursos[0].codigo
+
+    assert elegido("profesores", "horarios") == "A-1"
+    assert elegido("horarios", "profesores") == "A-2"
+    assert elegido("profesores") == "A-1"  # las franjas no están en el ranking: pesan 0
+    assert elegido("horarios") == "A-2"
+
+
+def test_clases_en_el_ranking_no_hace_perder_clases() -> None:
+    # Aunque "clases" quede de último, una clase más sigue valiendo más que cualquier preferencia.
+    a = Clase(1, "A", "A", [curso(1, "A-1", 5, ("lunes", 7, 9))])
+    b = Clase(2, "B", "B", [curso(2, "B-1", 5, ("lunes", 13, 15))])
+    w = calcular_pesos([PrioridadPreferencia("huecos", 1), PrioridadPreferencia("clases", 2)])
+    resultado = mejor_horario([PreferenciaClase(a), PreferenciaClase(b)], preferencia_sin_huecos=True, pesos=w)
+    assert len(resultado.cursos) == 2
+
+
+def test_peso_cero_en_cercania_no_agranda_la_tabla() -> None:
+    prefs = instancia_ejemplo()
+    for p in prefs:
+        for c in p.clase.cursos:
+            c.salones = [Salon(c.id, "S", Edificio(c.id % 2, "E", c.id % 2 * 100, 0))]
+    sin = mejor_horario(prefs).entradas_tabla
+    w = calcular_pesos([PrioridadPreferencia("horarios", 1)])
+    assert mejor_horario(prefs, preferencia_cercania=True, pesos=w).entradas_tabla == sin
