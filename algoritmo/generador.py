@@ -11,6 +11,7 @@ from algoritmo.modelos import (
     CALIFICACION_MAXIMA,
     Clase,
     Curso,
+    Edificio,
     Estudiante,
     Horario,
     PreferenciaClase,
@@ -18,6 +19,7 @@ from algoritmo.modelos import (
     PreferenciaProfe,
     PreferenciasDeEstudiante,
     Profesor,
+    Salon,
 )
 from algoritmo.tiempo import DIAS, HORA_FIN, HORA_INICIO
 
@@ -60,12 +62,17 @@ def generar_instancia(
     profes_calificados: int = 3,
     prob_amigo: float = 0.2,
     prob_exclusion: float = 0.05,
+    num_edificios: int = 6,
+    prob_cercania: float = 0.3,
     semilla: int | None = None,
 ) -> tuple[list[Clase], list[Estudiante]]:
     rng = random.Random(semilla)
     num_clases = num_clases or clases_por_estudiante * 2
     patrones = [_patron_aleatorio(rng) for _ in range(num_patrones)]
     profesores = [Profesor(i, f"Profesor {i}") for i in range(num_profesores)]
+    edificios = [
+        Edificio(i, f"Edificio {i}", rng.uniform(0, 500), rng.uniform(0, 500)) for i in range(num_edificios)
+    ]
 
     clases, siguiente_curso = [], 0
     for id_clase in range(num_clases):
@@ -78,6 +85,7 @@ def generar_instancia(
                     cupo=rng.randint(0, cupo_maximo),
                     horarios=rng.choice(patrones),
                     profesor=rng.choice(profesores),
+                    salones=[Salon(siguiente_curso, f"S{siguiente_curso}", rng.choice(edificios))] if edificios else [],
                 )
             )
             siguiente_curso += 1
@@ -90,6 +98,7 @@ def generar_instancia(
             [PreferenciaClase(c, rng.random() < fraccion_prioritarias) for c in elegidas],
             _franjas_aleatorias(rng, prob_dia_con_franja),
             _calificaciones_aleatorias(rng, elegidas, profes_calificados),
+            preferencia_cercania=rng.random() < prob_cercania,
         )
         estudiantes.append(Estudiante(id=id_estudiante, preferencias=preferencias))
 

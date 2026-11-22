@@ -1,4 +1,4 @@
-"""Coordinación global (Niveles 1 a 5).
+"""Coordinación global (Niveles 1 a 6).
 
 1. Orden: sorteo con semilla, reordenado para que los estudiantes de cada
    componente conexa del grafo de amistad queden seguidos (así los amigos se
@@ -34,6 +34,7 @@ import random
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from algoritmo.cercania import Campus, penalizacion_cursos
 from algoritmo.companeros import construir_red, ordenar_por_componentes, satisfaccion_companeros
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
 from algoritmo.modelos import Curso, Estudiante, PreferenciaClase
@@ -80,7 +81,7 @@ class ResultadoAsignacion:
 
     @property
     def satisfaccion_promedio(self) -> float:
-        """Satisfacción promedio por clase asignada (franjas + profesor + compañeros)."""
+        """Satisfacción promedio por clase asignada (franjas + profesor + compañeros − cercanía)."""
         asignadas = self.clases_asignadas
         return sum(p[2] for p in self.puntajes.values()) / asignadas if asignadas else 0.0
 
@@ -105,6 +106,7 @@ def asignar_horarios(
     ``pasadas_mejora`` = 0 desactiva la fase de mejora.
     """
     red = construir_red(estudiantes)
+    por_id = {e.id: e for e in estudiantes}
     preferencias = {e.id: e.preferencias_de_clase() for e in estudiantes}
     # id estudiante → id curso → preferencia de la clase a la que pertenece
     clase_del_curso = {e.id: {c.id: p for p in preferencias[e.id] for c in p.clase.cursos} for e in estudiantes}
@@ -116,6 +118,8 @@ def asignar_horarios(
         for p in preferencias[e.id]:
             for curso in p.clase.cursos:
                 cupos.setdefault(curso.id, curso.cupo)
+    # Nivel 6: edificios y distancias, una sola vez para todos (misma normalización).
+    campus = Campus([c for e in estudiantes for p in preferencias[e.id] for c in p.clase.cursos])
 
     horarios: dict[int, list[Curso]] = {e.id: [] for e in estudiantes}
     inscritos: dict[int, set[int]] = {c: set() for c in cupos}  # id curso → ids de estudiantes
@@ -157,6 +161,9 @@ def asignar_horarios(
             franjas_habilitadas=e.preferencias.franjas_habilitadas,
             preferencia_profes=e.preferencias.preferencia_profes,
             bono_companeros=bono_companeros(e),
+            preferencia_cercania=e.preferencias.preferencia_cercania,
+            cursos_fijos=horarios[e.id],
+            campus=campus,
         )
         entradas += resultado.entradas_tabla
         return resultado
@@ -174,6 +181,8 @@ def asignar_horarios(
                 + satisfaccion_profesor(c, calif[e_id])
                 + satisfaccion_companeros(e_id, p.clase.id, inscritos[c.id] - {e_id}, red)
             )
+        if por_id[e_id].preferencias.preferencia_cercania:
+            satisf -= penalizacion_cursos(horarios[e_id], campus)
         return (prio, no_prio, satisf)
 
     def puntaje_de_grupo(ids: set[int]) -> Puntaje:

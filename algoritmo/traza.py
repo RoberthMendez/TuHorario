@@ -1,4 +1,4 @@
-"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 5).
+"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 6).
 
 Uso, desde la raíz del repo:  python -m algoritmo.traza
 (también funciona con el botón ▶ de VS Code o ``python algoritmo/traza.py``).
@@ -23,6 +23,7 @@ from algoritmo.asignacion import asignar_horarios
 from algoritmo.modelos import (
     Clase,
     Curso,
+    Edificio,
     Estudiante,
     Horario,
     PreferenciaClase,
@@ -30,6 +31,7 @@ from algoritmo.modelos import (
     PreferenciaProfe,
     PreferenciasDeEstudiante,
     Profesor,
+    Salon,
 )
 from algoritmo.pd_estudiante import formato, mejor_horario
 from algoritmo.tiempo import DIAS, HORA_FIN, HORA_INICIO, bloques_de, describir_mascara, numero_de_bloque
@@ -81,8 +83,11 @@ def describir_profes(preferencias: list[PreferenciaProfe]) -> str:
     return ", ".join(f"{p.profesor.nombre} {p.preferencia}" for p in preferencias)
 
 
-def curso(id_: int, codigo: str, cupo: int, profesor: Profesor, *sesiones: tuple[str, int, int]) -> Curso:
-    return Curso(id_, codigo, cupo, [Horario(d, i * 60, f * 60) for d, i, f in sesiones], profesor)
+def curso(
+    id_: int, codigo: str, cupo: int, profesor: Profesor, edificio: Edificio, *sesiones: tuple[str, int, int]
+) -> Curso:
+    horarios = [Horario(d, i * 60, f * 60) for d, i, f in sesiones]
+    return Curso(id_, codigo, cupo, horarios, profesor, salones=[Salon(id_, f"{edificio.nombre}-{id_}", edificio)])
 
 
 def todos_los_dias(inicio: str, fin: str, dias: tuple[str, ...] = DIAS[:5]) -> list[Horario]:
@@ -92,25 +97,31 @@ def todos_los_dias(inicio: str, fin: str, dias: tuple[str, ...] = DIAS[:5]) -> l
 ROJAS, GOMEZ, PEREZ = Profesor(1, "Rojas"), Profesor(2, "Gomez"), Profesor(3, "Perez")
 DIAZ, MORA, RUIZ = Profesor(4, "Diaz"), Profesor(5, "Mora"), Profesor(6, "Ruiz")
 
-# Misma instancia de dp_ejemplo.py, ahora con profesores. Calculo-C y
-# Calculo-D tienen el mismo horario pero distinto profesor.
+# Nivel 6: tres edificios. Ingenieria y Ciencias están en extremos opuestos
+# del campus (distancia máxima); Central queda cerca de Ingenieria.
+INGENIERIA = Edificio(1, "Ingenieria", 0, 0)
+CENTRAL = Edificio(2, "Central", 100, 0)
+CIENCIAS = Edificio(3, "Ciencias", 300, 400)
+
+# Misma instancia de dp_ejemplo.py, ahora con profesores y edificios.
+# Calculo-C y Calculo-D tienen el mismo horario pero distinto profesor y edificio.
 CALCULO = Clase(1, "CAL", "Calculo", [
-    curso(1, "Calculo-A", 2, ROJAS, ("lunes", 7, 9), ("miercoles", 7, 9)),
-    curso(2, "Calculo-B", 0, ROJAS, ("martes", 9, 11), ("jueves", 9, 11)),
-    curso(3, "Calculo-C", 5, GOMEZ, ("lunes", 11, 13), ("miercoles", 11, 13)),
-    curso(4, "Calculo-D", 5, PEREZ, ("lunes", 11, 13), ("miercoles", 11, 13)),
+    curso(1, "Calculo-A", 2, ROJAS, CENTRAL, ("lunes", 7, 9), ("miercoles", 7, 9)),
+    curso(2, "Calculo-B", 0, ROJAS, CENTRAL, ("martes", 9, 11), ("jueves", 9, 11)),
+    curso(3, "Calculo-C", 5, GOMEZ, INGENIERIA, ("lunes", 10, 12), ("miercoles", 10, 12)),
+    curso(4, "Calculo-D", 5, PEREZ, CIENCIAS, ("lunes", 10, 12), ("miercoles", 10, 12)),
 ])
 FISICA = Clase(2, "FIS", "Fisica", [
-    curso(5, "Fisica-A", 3, DIAZ, ("lunes", 8, 10), ("jueves", 8, 10)),
-    curso(6, "Fisica-B", 3, MORA, ("martes", 14, 16), ("viernes", 14, 16)),
+    curso(5, "Fisica-A", 3, DIAZ, INGENIERIA, ("lunes", 8, 10), ("jueves", 8, 10)),
+    curso(6, "Fisica-B", 3, MORA, CIENCIAS, ("martes", 14, 16), ("viernes", 14, 16)),
 ])
 PROG = Clase(3, "PRO", "Programacion", [
-    curso(7, "Prog-A", 1, RUIZ, ("lunes", 11, 13), ("viernes", 7, 9)),
-    curso(8, "Prog-B", 4, DIAZ, ("martes", 14, 16), ("jueves", 14, 16)),
+    curso(7, "Prog-A", 1, RUIZ, CENTRAL, ("lunes", 11, 13), ("viernes", 7, 9)),
+    curso(8, "Prog-B", 4, DIAZ, INGENIERIA, ("martes", 14, 16), ("jueves", 14, 16)),
 ])
 CLASES = [CALCULO, FISICA, PROG]
 # Solo se usa en la coordinación global (sección 3).
-ETICA = Clase(4, "ETI", "Etica", [curso(9, "Etica-A", 2, RUIZ, ("martes", 7, 9))])
+ETICA = Clase(4, "ETI", "Etica", [curso(9, "Etica-A", 2, RUIZ, CENTRAL, ("martes", 7, 9))])
 # Igual que dp_ejemplo.py: Calculo y Fisica prioritarias, Programacion no.
 PREFERENCIAS = [PreferenciaClase(CALCULO, True), PreferenciaClase(FISICA, True), PreferenciaClase(PROG, False)]
 # Nivel 3: franjas del estudiante de la sección 2.
@@ -124,10 +135,14 @@ FRANJAS = [
 # Nivel 4: calificaciones del estudiante de la sección 2 (Mora vetado).
 PROFES = [
     PreferenciaProfe(PEREZ, 3),
-    PreferenciaProfe(GOMEZ, 1),
+    PreferenciaProfe(GOMEZ, 2),
     PreferenciaProfe(DIAZ, 2),
     PreferenciaProfe(MORA, 0),
 ]
+# Nivel 6: el estudiante de la sección 2 pide cercanía. Por profesor prefiere
+# Calculo-D (Perez 3 > Gomez 2), pero Calculo-D es en Ciencias y el lunes
+# empieza justo cuando termina Fisica-A, que es en Ingenieria (el otro extremo).
+CERCANIA = True
 
 
 def titulo(texto: str) -> None:
@@ -138,14 +153,20 @@ def main() -> None:
     titulo("1. Máscaras (bloque = día*14 + (hora-7))")
     for clase in CLASES:
         for c in clase.cursos:
-            print(f"{c.codigo:10} cupo {c.cupo}  {c.profesor.nombre:6}  "
+            print(f"{c.codigo:10} cupo {c.cupo}  {c.profesor.nombre:6} {c.salones[0].edificio.nombre:10}  "
                   f"[{describir_mascara(c.mascara)}]  bloques {bloques_de(c.mascara)}")
+    print("\nDistancias: " + ", ".join(
+        f"{a.nombre}–{b.nombre} {a.calcular_distancia(b):g}"
+        for a, b in ((INGENIERIA, CENTRAL), (INGENIERIA, CIENCIAS), (CENTRAL, CIENCIAS))
+    ))
 
     titulo("2. PD de un estudiante: Calculo y Fisica prioritarias, Programacion no")
     print(f"Franjas habilitadas: {describir_franjas(FRANJAS)}")
     print(f"Calificaciones de profesores: {describir_profes(PROFES)}")
+    print(f"Cercanía: {'sí' if CERCANIA else 'no'}")
     print()
-    resultado = mejor_horario(PREFERENCIAS, traza=print, franjas_habilitadas=FRANJAS, preferencia_profes=PROFES)
+    resultado = mejor_horario(PREFERENCIAS, traza=print, franjas_habilitadas=FRANJAS, preferencia_profes=PROFES,
+                              preferencia_cercania=CERCANIA)
     print(f"\nPuntaje (prioritarias, no prioritarias, satisfacción): {formato(resultado.puntaje)}")
     print(f"Horario: {[c.codigo for c in resultado.cursos]}")
     print(f"Entradas en la tabla: {resultado.entradas_tabla}")
@@ -185,6 +206,8 @@ def main() -> None:
     ana, beto, caro, dani = estudiantes
     caro.preferencias.preferencia_estudiantes = [PreferenciaCompanero(ana, CALCULO)]
     beto.preferencias.estudiantes_restringidos = [dani]
+    # Nivel 6: Dani pide cercanía.
+    dani.preferencias.preferencia_cercania = True
 
     global_ = asignar_horarios(estudiantes, semilla=2026, traza=print)
     print(f"\nPrioritarias asignadas: {global_.prioritarias_asignadas}/{global_.prioritarias_solicitadas}")
@@ -199,8 +222,8 @@ def main() -> None:
         print(f"\n{clase.nombre} ({clase.codigo})")
         for c in clase.cursos:
             quedan = global_.cupos_restantes.get(c.id, c.cupo)
-            print(f"  {c.codigo:10} {c.profesor.nombre:6} cupo {c.cupo} → quedan {quedan}"
-                  f"   [{describir_mascara(c.mascara)}]")
+            print(f"  {c.codigo:10} {c.profesor.nombre:6} {c.salones[0].edificio.nombre:10} cupo {c.cupo}"
+                  f" → quedan {quedan}   [{describir_mascara(c.mascara)}]")
 
     titulo("5. Preferencias y horarios finales")
     for e in estudiantes:
@@ -216,6 +239,7 @@ def main() -> None:
         excluidos = ", ".join(o.nombre for o in e.preferencias.estudiantes_restringidos)
         print(f"  Compañeros pedidos: {amigos or 'ninguno'}")
         print(f"  Estudiantes excluidos: {excluidos or 'ninguno'}")
+        print(f"  Cercanía: {'sí' if e.preferencias.preferencia_cercania else 'no'}")
         faltan = ", ".join(p.clase.nombre for p in global_.no_asignadas[e.id])
         detalle = f"puntaje {formato(global_.puntajes[e.id])}" + (f", sin asignar: {faltan}" if faltan else "")
         imprimir_horario(f"Horario de {e.nombre} [{detalle}]", global_.horarios[e.id], franjas)

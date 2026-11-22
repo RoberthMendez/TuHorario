@@ -4,8 +4,9 @@ import random
 import pytest
 
 from algoritmo.generador import generar_instancia
+from algoritmo.cercania import Campus, penalizacion_cursos
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
-from algoritmo.modelos import Clase, Curso, Horario, PreferenciaClase, PreferenciaProfe, Profesor
+from algoritmo.modelos import Clase, Curso, Edificio, Horario, PreferenciaClase, PreferenciaProfe, Profesor, Salon
 from algoritmo.pd_estudiante import mejor_horario
 from algoritmo.profesores import calificaciones, profesor_vetado, satisfaccion_profesor
 
@@ -38,10 +39,12 @@ def fuerza_bruta(
     franjas: list[Horario],
     profes: list[PreferenciaProfe],
     bono: dict[int, float],
+    cercania: bool = False,
 ) -> tuple[int, int, float]:
     """Mejor (prioritarias, no_prioritarias, satisfaccion) probando todas las combinaciones."""
     unidas = mascara_franjas(franjas)
     calif = calificaciones(profes)
+    campus = Campus([c for p in preferencias for c in p.clase.cursos])
     mejor = (0, 0, 0.0)
     opciones = [
         [None] + [c for c in p.clase.cursos if c.cupo > 0 and not profesor_vetado(c, calif)]
@@ -62,6 +65,8 @@ def fuerza_bruta(
             else:
                 no_prio += 1
         if valida:
+            if cercania:
+                satisf -= penalizacion_cursos([c for c in combinacion if c is not None], campus)
             mejor = max(mejor, (prio, no_prio, satisf))
     return mejor
 
@@ -170,8 +175,10 @@ def test_optimo_igual_a_fuerza_bruta(semilla: int) -> None:
     profes = estudiantes[0].preferencias.preferencia_profes
     # Bono de compañeros aleatorio por curso (Nivel 5), también negativo.
     bono = {c.id: rng.choice([-1.0, 0.0, 0.0, 1.0, 2.0]) for p in preferencias for c in p.clase.cursos}
-    resultado = mejor_horario(preferencias, franjas_habilitadas=franjas, preferencia_profes=profes, bono_companeros=bono)
-    esperado = fuerza_bruta(preferencias, franjas, profes, bono)
+    cercania = rng.random() < 0.5  # Nivel 6
+    resultado = mejor_horario(preferencias, franjas_habilitadas=franjas, preferencia_profes=profes,
+                              bono_companeros=bono, preferencia_cercania=cercania)
+    esperado = fuerza_bruta(preferencias, franjas, profes, bono, cercania)
     assert resultado.puntaje[:2] == esperado[:2]
     assert resultado.puntaje[2] == pytest.approx(esperado[2])
     assert sin_cruces(resultado.cursos)
@@ -283,3 +290,73 @@ def test_preferencia_fuera_de_rango() -> None:
         PreferenciaProfe(Profesor(1), 4)
     with pytest.raises(ValueError):
         PreferenciaProfe(Profesor(1), -1)
+
+
+# ---------------------------------------------------------------- Nivel 6
+
+CERCA = Edificio(1, "Cerca", 0, 0)
+MEDIO = Edificio(2, "Medio", 30, 40)  # a 50 de Cerca
+LEJOS = Edificio(3, "Lejos", 60, 80)  # a 100 de Cerca: distancia máxima
+
+
+def curso_en(id_: int, codigo: str, edificio: Edificio, dia: str, inicio: int, fin: int) -> Curso:
+    return Curso(id_, codigo, 5, [Horario(dia, inicio * 60, fin * 60)], salones=[Salon(id_, f"S{id_}", edificio)])
+
+
+def test_distancia_entre_edificios() -> None:
+    assert CERCA.calcular_distancia(MEDIO) == 50
+    assert CERCA.calcular_distancia(CERCA) == 0
+
+
+@pytest.mark.parametrize(
+    ("dia_b", "inicio_b", "edificio_b", "esperada"),
+    [
+        ("lunes", 9, LEJOS, 1.0),  # justo después y en el edificio más lejano
+        ("lunes", 9, MEDIO, 0.5),  # justo después, a la mitad de la distancia máxima
+        ("lunes", 10, LEJOS, 0.0),  # 1 hora de hueco: ya no se penaliza
+        ("lunes", 11, LEJOS, 0.0),  # 2 horas de hueco: tampoco
+        ("martes", 9, LEJOS, 0.0),  # otro día
+        ("lunes", 9, CERCA, 0.0),  # mismo edificio
+    ],
+)
+def test_penalizacion_de_cercania(dia_b: str, inicio_b: int, edificio_b: Edificio, esperada: float) -> None:
+    a = curso_en(1, "A", CERCA, "lunes", 7, 9)
+    b = curso_en(2, "B", edificio_b, dia_b, inicio_b, inicio_b + 2)
+    campus = Campus([a, b, curso_en(3, "X", CERCA, "sabado", 7, 8), curso_en(4, "Y", LEJOS, "sabado", 9, 10)])
+    assert penalizacion_cursos([a, b], campus) == pytest.approx(esperada)
+
+
+def test_cercania_elige_la_seccion_del_edificio_cercano() -> None:
+    a = Clase(1, "A", "A", [curso_en(1, "A-1", CERCA, "lunes", 7, 9)])
+    b = Clase(2, "B", "B", [curso_en(2, "B-lejos", LEJOS, "lunes", 9, 11), curso_en(3, "B-cerca", CERCA, "lunes", 9, 11)])
+    prefs = [PreferenciaClase(a), PreferenciaClase(b)]
+    sin = mejor_horario(prefs)
+    assert [c.codigo for c in sin.cursos] == ["A-1", "B-lejos"]  # sin la preferencia: empate, gana el primero
+    con = mejor_horario(prefs, preferencia_cercania=True)
+    assert [c.codigo for c in con.cursos] == ["A-1", "B-cerca"]
+    assert con.puntaje == (0, 2, 0.0)
+
+
+def test_cercania_no_hace_perder_clases() -> None:
+    a = Clase(1, "A", "A", [curso_en(1, "A-1", CERCA, "lunes", 7, 9)])
+    b = Clase(2, "B", "B", [curso_en(2, "B-lejos", LEJOS, "lunes", 9, 11)])
+    resultado = mejor_horario([PreferenciaClase(a), PreferenciaClase(b)], preferencia_cercania=True)
+    assert len(resultado.cursos) == 2
+    assert resultado.puntaje == pytest.approx((0, 2, -1.0))
+
+
+def test_cercania_cuenta_los_cursos_fijos() -> None:
+    fijo = curso_en(1, "P-1", CERCA, "lunes", 7, 9)
+    b = Clase(2, "B", "B", [curso_en(2, "B-lejos", LEJOS, "lunes", 9, 11), curso_en(3, "B-cerca", CERCA, "lunes", 9, 11)])
+    resultado = mejor_horario([PreferenciaClase(b)], firma_inicial=fijo.mascara, preferencia_cercania=True,
+                              cursos_fijos=[fijo])
+    assert [c.codigo for c in resultado.cursos] == ["B-cerca"]
+
+
+def test_salones_deben_coincidir_con_las_sesiones() -> None:
+    sesiones = [Horario.crear("lunes", "07:00", "09:00"), Horario.crear("martes", "07:00", "09:00")]
+    salon = Salon(1, "S1", CERCA)
+    Curso(1, "X", 5, sesiones, salones=[salon])  # un salón para todas
+    Curso(2, "Y", 5, sesiones, salones=[salon, salon])  # uno por sesión
+    with pytest.raises(ValueError):
+        Curso(3, "Z", 5, sesiones, salones=[salon, salon, salon])

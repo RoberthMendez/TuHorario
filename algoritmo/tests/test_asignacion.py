@@ -256,3 +256,26 @@ def test_fase_de_mejora_nunca_empeora_el_puntaje_global(semilla: int) -> None:
     assert con[:2] >= sin[:2]
     if con[:2] == sin[:2]:
         assert con[2] >= sin[2] - 1e-9
+
+
+# ---------------------------------------------------------------- Nivel 6
+
+def test_ronda_2_usa_los_edificios_de_la_ronda_1() -> None:
+    from algoritmo.modelos import Edificio, Salon
+
+    cerca, lejos = Edificio(1, "Cerca", 0, 0), Edificio(2, "Lejos", 100, 0)
+
+    def curso_en(id_: int, codigo: str, edificio: Edificio, inicio: str, fin: str) -> Curso:
+        return Curso(id_, codigo, 5, [Horario.crear("lunes", inicio, fin)], salones=[Salon(id_, codigo, edificio)])
+
+    p = Clase(1, "P", "P", [curso_en(1, "P-1", cerca, "07:00", "09:00")])
+    n = Clase(2, "N", "N", [curso_en(2, "N-lejos", lejos, "09:00", "11:00"), curso_en(3, "N-cerca", cerca, "09:00", "11:00")])
+    e = estudiante(1, (p, True), (n, False))
+    e.preferencias.preferencia_cercania = True
+    resultado = asignar_horarios([e], semilla=0, pasadas_mejora=0)
+    assert [c.codigo for c in resultado.horarios[1]] == ["P-1", "N-cerca"]
+    assert resultado.puntajes[1] == (1, 1, 0.0)
+
+    e.preferencias.preferencia_cercania = False
+    resultado = asignar_horarios([e], semilla=0, pasadas_mejora=0)
+    assert [c.codigo for c in resultado.horarios[1]] == ["P-1", "N-lejos"]

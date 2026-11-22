@@ -1,7 +1,8 @@
 """Entidades de entrada del algoritmo (subconjunto de los TADs de docs/).
 
-Solo se modela lo que usan los Niveles 1 a 5 (clases, cursos, horarios, cupos,
-prioridad de cada clase, franjas habilitadas, profesores y compañeros). Los niveles siguientes agregan campos (profesor, salones, preferencias…) sin
+Solo se modela lo que usan los Niveles 1 a 6 (clases, cursos, horarios, cupos,
+prioridad de cada clase, franjas habilitadas, profesores, compañeros y
+salones/edificios). Los niveles siguientes agregan campos (profesor, salones, preferencias…) sin
 cambiar la recurrencia de la PD.
 
 Las horas se guardan como enteros (minutos desde la medianoche), no como texto.
@@ -58,11 +59,36 @@ class Profesor:
 
 
 @dataclass(eq=False)
+class Edificio:
+    """Edificio del campus con su posición en el plano (Nivel 6)."""
+
+    id: int
+    nombre: str = ""
+    coordenada_x: float = 0.0
+    coordenada_y: float = 0.0
+
+    def calcular_distancia(self, otro: "Edificio") -> float:
+        """Distancia en línea recta entre los dos edificios (0 si es el mismo)."""
+        return ((self.coordenada_x - otro.coordenada_x) ** 2 + (self.coordenada_y - otro.coordenada_y) ** 2) ** 0.5
+
+
+@dataclass(eq=False)
+class Salon:
+    id: int
+    codigo: str
+    edificio: Edificio
+
+
+@dataclass(eq=False)
 class Curso:
     """Sección concreta de una clase (p. ej. Cálculo grupo 3).
 
     ``cupo`` es la capacidad inicial; el algoritmo no lo modifica, lleva los
     cupos restantes aparte. ``mascara`` se precalcula una sola vez.
+
+    ``salones`` (Nivel 6, equivale a los SalonHorario del TAD): vacío = sin
+    salón; un solo salón = todas las sesiones en él; o uno por sesión, en el
+    mismo orden que ``horarios``.
     """
 
     id: int
@@ -70,11 +96,14 @@ class Curso:
     cupo: int
     horarios: list[Horario]
     profesor: Profesor | None = None
+    salones: list[Salon] = field(default_factory=list)
     mascara: int = field(init=False)
 
     def __post_init__(self) -> None:
         if self.cupo < 0:
             raise ValueError(f"El cupo del curso {self.codigo} no puede ser negativo")
+        if len(self.salones) not in (0, 1, len(self.horarios)):
+            raise ValueError(f"El curso {self.codigo} debe tener 0, 1 o un salón por sesión")
         mascara = 0
         for horario in self.horarios:
             if mascara & horario.mascara:
@@ -138,6 +167,8 @@ class PreferenciasDeEstudiante:
     # Nivel 5: compañeros por clase y estudiantes con quienes no quiere compartir ninguna clase.
     preferencia_estudiantes: list[PreferenciaCompanero] = field(default_factory=list)
     estudiantes_restringidos: list["Estudiante"] = field(default_factory=list)
+    # Nivel 6: prefiere que las clases seguidas sean en edificios cercanos.
+    preferencia_cercania: bool = False
 
 
 @dataclass(eq=False)
