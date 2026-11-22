@@ -87,8 +87,10 @@ cd algoritmo && pytest
 
 ## Tamaño y responsive (todas las páginas)
 
-- Referencia: con el navegador al 100 % de zoom en un portátil, cada pantalla
-  se ve completa, sin scroll y sin desbordes. Con otros zooms (67 %, 75 %,
+- Referencia: con el navegador al 100 % de zoom en un portátil, las pantallas
+  de una sola vista (como la Landing) se ven completas, sin scroll y sin
+  desbordes. Las pantallas largas (listas, formularios, como Preferencias)
+  usan scroll vertical normal, nunca horizontal. Con otros zooms (67 %, 75 %,
   110 %…) o tamaños de ventana debe seguir viéndose igual de bien: nada se sale
   del contenedor, no aparecen franjas vacías ni se desfasan las ilustraciones.
 - También debe ser responsive para móvil y tablet.
@@ -100,12 +102,29 @@ cd algoritmo && pytest
     tokens del tema. Si hace falta un valor arbitrario, escribirlo en `--u`
     (`calc(var(--u)*8.5)`) o en `%`, nunca en `px`/`rem` fijos. Excepción: bordes
     y líneas de 1–2 px.
-  - Variant `escritorio:` = ancho ≥ 1024 px y orientación horizontal. Ahí la
-    raíz de la página fija `--u: min(100vw/1440, 100dvh/<alto del diseño>, 1.5px)`
-    y usa `h-dvh` para que el lienzo quepa completo en la ventana.
+  - Variant `escritorio:` = ancho ≥ 1024 px y orientación horizontal. En
+    pantallas de una sola vista la raíz fija
+    `--u: min(100vw/1440, 100dvh/<alto del diseño>, 1.5px)` y usa `h-dvh` para
+    que el lienzo quepa completo en la ventana. En pantallas largas la raíz fija
+    `--u: clamp(0.78px, 100vw*0.8/1440, 1px)` (solo depende del ancho; el 0.8
+    da una vista "alejada", como un zoom del navegador al 80 %, para ver más
+    contenido a la vez) y la columna de contenido es fluida (`w-full max-w-…`).
+    En móvil/tablet esas pantallas usan `--u: 0.9px`.
   - Sin `escritorio:` (móvil/tablet vertical) el layout se apila con scroll
     normal; los elementos anchos (títulos grandes, ilustraciones) ajustan su
     propio `--u` al ancho (`min(1px, (100vw - 3rem)/<ancho>)`) y vuelven a
     heredar en escritorio con `escritorio:[--u:inherit]`.
 - Verificar cada pantalla en escritorio (p. ej. 1280×600, 1536×730, 1920×960)
   y en móvil/tablet (360, 390 y 768 px de ancho).
+
+## Animaciones (todas las páginas)
+
+- Estilo "escolar" y divertido, pero fluido y sin exagerar: entradas con un
+  pequeño rebote al cargar la pantalla (escalonadas), despliegues suaves,
+  giros con rebote en flechas e íconos, y pequeños "levantes" o giros al pasar
+  el mouse por fichas y tarjetas.
+- Usar los tokens de `src/styles/tema.css` (`animate-entrar`, `animate-pop`,
+  `animate-flotar`, `animate-parpadeo`, `animate-titilar`, `boton-3d`) y la
+  curva con rebote `cubic-bezier(0.34,1.56,0.64,1)` en las transiciones.
+- Respetar `prefers-reduced-motion` (`motion-reduce:…`) en las animaciones
+  continuas o grandes.

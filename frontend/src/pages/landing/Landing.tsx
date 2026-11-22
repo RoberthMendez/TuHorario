@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import iconoFlecha from '../../assets/icono-flecha.svg'
 import Boton from '../../components/Boton'
 import FondoCuadricula from '../../components/FondoCuadricula'
@@ -13,6 +14,8 @@ import Titulo from './titulo/Titulo'
  * Móvil/tablet vertical: columnas apiladas con scroll normal.
  */
 export default function Landing() {
+  const navegar = useNavigate()
+
   return (
     <div className="relative min-h-dvh overflow-hidden bg-zumthor escritorio:flex escritorio:h-dvh escritorio:items-center escritorio:justify-center escritorio:[--u:min(100vw/1440,100dvh/900,1.5px)]">
       <FondoCuadricula />
@@ -23,7 +26,11 @@ export default function Landing() {
             <Titulo />
             <Descripcion />
             <div className="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8 escritorio:mt-10">
-              <Boton texto="Comenzar" icono={iconoFlecha} />
+              <Boton
+                texto="Comenzar"
+                icono={iconoFlecha}
+                onClick={() => navegar('/preferencias')}
+              />
               <Beneficios />
             </div>
           </section>
