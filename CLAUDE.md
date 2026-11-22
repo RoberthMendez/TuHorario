@@ -54,3 +54,58 @@ cd algoritmo && pytest
 - Seguir los TADs de `docs/` para nombrar tipos y entidades.
 - Priorizar soluciones simples: el proyecto no va a escalar.
 - No usar Alembic ni herramientas de migraciones.
+
+## Organización de componentes (frontend)
+
+- Todo elemento visual distinguible del diseño es un componente de React, sea
+  reutilizable o no. Un componente por archivo `.tsx`, nombres en PascalCase.
+  Las páginas solo ensamblan componentes; no concentran todo el JSX.
+- Las carpetas se nombran con la primera letra en minúscula (camelCase:
+  `landing`, `ilustracionHorario`); los archivos de componentes en PascalCase.
+- Cada página tiene su propia carpeta `src/pages/<pagina>/` con `<Pagina>.tsx`
+  en la raíz y todos los componentes que solo usa esa página.
+- Cuando un elemento visual tiene más de un archivo, todos van juntos en una
+  subcarpeta con el nombre del elemento: p. ej. `pages/landing/ilustracionHorario/`
+  contiene `IlustracionHorario`, `EncabezadoDias`, `ColumnaHoras` y
+  `BloqueClase`, y `pages/landing/titulo/` contiene `Titulo` y
+  `ResaltadoTitulo`. Si el elemento es un solo archivo, va directamente en la
+  carpeta padre, sin subcarpeta (p. ej. `pages/landing/Descripcion.tsx`).
+- Los componentes reutilizables en varias pantallas (logo, botón, fondo de
+  cuadrícula) van en `src/components/`, con la misma regla de subcarpetas.
+  Nada específico de una página va ahí.
+- La misma regla aplica a `src/assets/`: los SVG/imágenes que forman un mismo
+  elemento visual van en una subcarpeta (p. ej. `assets/logo/` con las piezas
+  del logo); un asset único de su elemento queda en `assets/`.
+- Ante la duda, el componente va en la carpeta de la página.
+- Antes de crear un componente, revisar `src/components/` y reutilizar el que
+  ya exista si coincide con el diseño.
+- Colores, tipografías y sombras del diseño se definen como variables del tema
+  de Tailwind en `src/styles/tema.css`, no como valores sueltos.
+- Todo botón con el estilo 3D (sombra sólida debajo) usa la utilidad
+  `boton-3d` de `tema.css`: se levanta al pasar el mouse y se hunde al
+  presionarlo. Solo se mueve el botón completo, no su contenido.
+
+## Tamaño y responsive (todas las páginas)
+
+- Referencia: con el navegador al 100 % de zoom en un portátil, cada pantalla
+  se ve completa, sin scroll y sin desbordes. Con otros zooms (67 %, 75 %,
+  110 %…) o tamaños de ventana debe seguir viéndose igual de bien: nada se sale
+  del contenedor, no aparecen franjas vacías ni se desfasan las ilustraciones.
+- También debe ser responsive para móvil y tablet.
+- Cómo se logra (ver `src/styles/tema.css`):
+  - `--u` es "1 px del diseño de Figma" (frames de 1440 px). Espaciado,
+    tipografía, radios y sombras del tema están en `--u` (`@theme inline`),
+    así que cambiar `--u` en un contenedor escala todo su contenido.
+  - Usar siempre utilidades de la escala de Tailwind (`w-25`, `top-91.5`) o
+    tokens del tema. Si hace falta un valor arbitrario, escribirlo en `--u`
+    (`calc(var(--u)*8.5)`) o en `%`, nunca en `px`/`rem` fijos. Excepción: bordes
+    y líneas de 1–2 px.
+  - Variant `escritorio:` = ancho ≥ 1024 px y orientación horizontal. Ahí la
+    raíz de la página fija `--u: min(100vw/1440, 100dvh/<alto del diseño>, 1.5px)`
+    y usa `h-dvh` para que el lienzo quepa completo en la ventana.
+  - Sin `escritorio:` (móvil/tablet vertical) el layout se apila con scroll
+    normal; los elementos anchos (títulos grandes, ilustraciones) ajustan su
+    propio `--u` al ancho (`min(1px, (100vw - 3rem)/<ancho>)`) y vuelven a
+    heredar en escritorio con `escritorio:[--u:inherit]`.
+- Verificar cada pantalla en escritorio (p. ej. 1280×600, 1536×730, 1920×960)
+  y en móvil/tablet (360, 390 y 768 px de ancho).

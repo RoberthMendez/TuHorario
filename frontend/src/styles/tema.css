@@ -1,0 +1,134 @@
+/*
+ * Tokens del diseño de Figma (TuHorario). Los nombres de color siguen los de Figma.
+ *
+ * Escalado: `--u` es "1 px del diseño" (frames de 1440 px de ancho). Todo lo
+ * que mide algo (espaciado, tipografía, radios, sombras) se expresa en `--u`,
+ * así que cambiar `--u` en un contenedor escala todo lo que hay dentro.
+ * Por defecto vale 1px; en escritorio la página la ajusta al tamaño de la
+ * ventana (ver CLAUDE.md, "Tamaño y responsive").
+ */
+:root {
+  --u: 1px;
+}
+
+/* Escritorio: ventana ancha y horizontal. Por debajo, diseño móvil apilado. */
+@custom-variant escritorio (@media (width >= 64rem) and (orientation: landscape));
+
+@theme {
+  /* Colores */
+  --color-zumthor: #eaf0fe;
+  --color-cuadricula: #d2daf1;
+  --color-zircon: #f6f9ff;
+  --color-madison: #10255e;
+  --color-cerulean: #1d4fd7;
+  --color-amarillo: #f6b81a;
+  --color-banana: #fce7ae;
+  --color-buttercup: #f7b418;
+  --color-bunting: #14224f;
+  --color-texto: #18202e;
+  --color-linea-horario: color-mix(
+    in srgb,
+    var(--color-madison) 12%,
+    transparent
+  );
+
+  /* Familias tipográficas. Bricolage usa el tamaño óptico automático: es lo
+     que coincide con el render de Figma (con opsz 14 el título sale ~60px más ancho). */
+  --font-bricolage: 'Bricolage Grotesque', sans-serif;
+  --font-dm-sans: 'DM Sans', sans-serif;
+  --font-dm-sans--font-variation-settings: 'opsz' 14;
+  --font-jakarta: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* `inline`: los valores se copian en cada utilidad, de modo que `var(--u)` se
+   resuelve en el elemento que la usa (y respeta los `--u` locales). */
+@theme inline {
+  --spacing: calc(var(--u) * 4);
+
+  /* Estilos de texto de Figma: tamaño / interlineado / tracking */
+  --text-titulo: calc(var(--u) * 100);
+  --text-titulo--line-height: calc(var(--u) * 120.667);
+  --text-titulo--letter-spacing: calc(var(--u) * -4);
+  --text-logo: calc(var(--u) * 30);
+  --text-logo--line-height: calc(var(--u) * 37.778);
+  --text-descripcion: calc(var(--u) * 20);
+  --text-descripcion--line-height: calc(var(--u) * 32);
+  --text-boton: calc(var(--u) * 22);
+  --text-boton--line-height: calc(var(--u) * 28.667);
+  --text-beneficio: calc(var(--u) * 15);
+  --text-beneficio--line-height: calc(var(--u) * 19.333);
+  --text-etiqueta: calc(var(--u) * 16);
+  --text-etiqueta--line-height: calc(var(--u) * 18.667);
+  --text-bloque-titulo: calc(var(--u) * 12.5);
+  --text-bloque-titulo--line-height: calc(var(--u) * 14.375);
+  --text-bloque-titulo--letter-spacing: calc(var(--u) * -0.1875);
+  --text-bloque: calc(var(--u) * 12);
+  --text-bloque--line-height: calc(var(--u) * 16.2);
+  --text-hueco: calc(var(--u) * 12);
+  --text-hueco--line-height: calc(var(--u) * 14.4);
+  --text-dia: calc(var(--u) * 12);
+  --text-dia--line-height: calc(var(--u) * 16);
+  --text-dia--letter-spacing: calc(var(--u) * 1.68);
+  --text-hora: calc(var(--u) * 11);
+  --text-hora--line-height: calc(var(--u) * 62);
+
+  /* Radios */
+  --radius-etiqueta: calc(var(--u) * 10);
+  --radius-icono: calc(var(--u) * 12);
+  --radius-bloque: calc(var(--u) * 14);
+  --radius-boton: calc(var(--u) * 20);
+  --radius-resaltado: calc(var(--u) * 22);
+  --radius-tarjeta: calc(var(--u) * 28);
+
+  /* Sombras */
+  --shadow-solida: 0 calc(var(--u) * 6) 0 var(--color-madison);
+  --shadow-solida-sm: 0 calc(var(--u) * 4) 0 var(--color-madison);
+  --shadow-logo: 0 calc(var(--u) * 4) 0 var(--color-bunting);
+  --shadow-tarjeta:
+    0 calc(var(--u) * 34) calc(var(--u) * 60)
+      color-mix(in srgb, var(--color-madison) 18%, transparent),
+    calc(var(--u) * 12) calc(var(--u) * 14) 0
+      color-mix(in srgb, var(--color-cerulean) 28%, transparent);
+
+  --drop-shadow-bloque: 0 calc(var(--u) * 3) 0
+    color-mix(in srgb, var(--color-madison) 35%, transparent);
+  --drop-shadow-bloque-indigo: 0 calc(var(--u) * 3) 0
+    color-mix(in srgb, var(--color-cerulean) 60%, transparent);
+  --drop-shadow-bloque-crema: 0 calc(var(--u) * 3) 0
+    color-mix(in srgb, var(--color-madison) 25%, transparent);
+  --drop-shadow-pieza-arrastrada: 0 calc(var(--u) * 22) calc(var(--u) * 15)
+    color-mix(in srgb, var(--color-madison) 35%, transparent);
+  --drop-shadow-pieza-suelta: 0 calc(var(--u) * 18) calc(var(--u) * 13)
+    color-mix(in srgb, var(--color-madison) 30%, transparent);
+}
+
+/*
+ * Botón 3D (estilo del diseño: sombra sólida debajo). Al pasar el mouse se
+ * levanta un poco; al presionarlo baja lo que mide la sombra y esta
+ * desaparece, como si se hundiera. Uso: clase `boton-3d` en cualquier botón.
+ */
+@utility boton-3d {
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 calc(var(--u) * 6) 0 --theme(--color-madison);
+  transition:
+    translate 150ms ease-out,
+    box-shadow 150ms ease-out;
+
+  @media (hover: hover) {
+    &:hover {
+      translate: 0 calc(var(--u) * -2);
+      box-shadow: 0 calc(var(--u) * 8) 0 --theme(--color-madison);
+    }
+  }
+
+  &:active {
+    translate: 0 calc(var(--u) * 6);
+    box-shadow: none;
+    transition-duration: 75ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
