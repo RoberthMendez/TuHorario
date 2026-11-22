@@ -5,6 +5,7 @@ import pytest
 
 from algoritmo.generador import generar_instancia
 from algoritmo.cercania import Campus, penalizacion_cursos
+from algoritmo.huecos import horas_de_hueco, penalizacion_huecos
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
 from algoritmo.modelos import Clase, Curso, Edificio, Horario, PreferenciaClase, PreferenciaProfe, Profesor, Salon
 from algoritmo.pd_estudiante import mejor_horario
@@ -40,6 +41,7 @@ def fuerza_bruta(
     profes: list[PreferenciaProfe],
     bono: dict[int, float],
     cercania: bool = False,
+    sin_huecos: bool = False,
 ) -> tuple[int, int, float]:
     """Mejor (prioritarias, no_prioritarias, satisfaccion) probando todas las combinaciones."""
     unidas = mascara_franjas(franjas)
@@ -67,6 +69,8 @@ def fuerza_bruta(
         if valida:
             if cercania:
                 satisf -= penalizacion_cursos([c for c in combinacion if c is not None], campus)
+            if sin_huecos:
+                satisf -= penalizacion_huecos(firma)
             mejor = max(mejor, (prio, no_prio, satisf))
     return mejor
 
@@ -176,9 +180,11 @@ def test_optimo_igual_a_fuerza_bruta(semilla: int) -> None:
     # Bono de compañeros aleatorio por curso (Nivel 5), también negativo.
     bono = {c.id: rng.choice([-1.0, 0.0, 0.0, 1.0, 2.0]) for p in preferencias for c in p.clase.cursos}
     cercania = rng.random() < 0.5  # Nivel 6
+    sin_huecos = rng.random() < 0.5  # Nivel 7
     resultado = mejor_horario(preferencias, franjas_habilitadas=franjas, preferencia_profes=profes,
-                              bono_companeros=bono, preferencia_cercania=cercania)
-    esperado = fuerza_bruta(preferencias, franjas, profes, bono, cercania)
+                              bono_companeros=bono, preferencia_cercania=cercania,
+                              preferencia_sin_huecos=sin_huecos)
+    esperado = fuerza_bruta(preferencias, franjas, profes, bono, cercania, sin_huecos)
     assert resultado.puntaje[:2] == esperado[:2]
     assert resultado.puntaje[2] == pytest.approx(esperado[2])
     assert sin_cruces(resultado.cursos)
@@ -360,3 +366,58 @@ def test_salones_deben_coincidir_con_las_sesiones() -> None:
     Curso(2, "Y", 5, sesiones, salones=[salon, salon])  # uno por sesión
     with pytest.raises(ValueError):
         Curso(3, "Z", 5, sesiones, salones=[salon, salon, salon])
+
+
+# ---------------------------------------------------------------- Nivel 7
+
+def mascara(*sesiones: tuple[str, int, int]) -> int:
+    m = 0
+    for dia, inicio, fin in sesiones:
+        m |= Horario(dia, inicio * 60, fin * 60).mascara
+    return m
+
+
+@pytest.mark.parametrize(
+    ("sesiones", "esperado"),
+    [
+        ((), 0),
+        ((("lunes", 7, 9),), 0),
+        ((("lunes", 7, 9), ("lunes", 9, 11)), 0),  # seguidas
+        ((("lunes", 7, 9), ("lunes", 11, 13)), 2),  # hueco de 9 a 11
+        ((("lunes", 7, 8), ("lunes", 10, 11), ("lunes", 14, 15)), 5),  # 2 + 3
+        ((("lunes", 7, 9), ("martes", 11, 13)), 0),  # días distintos no cuentan
+        ((("lunes", 7, 8), ("lunes", 20, 21), ("sabado", 7, 8), ("sabado", 9, 10)), 13),  # 12 + 1
+    ],
+)
+def test_horas_de_hueco(sesiones: tuple, esperado: int) -> None:
+    assert horas_de_hueco(mascara(*sesiones)) == esperado
+
+
+def test_sin_huecos_elige_la_seccion_seguida() -> None:
+    a = Clase(1, "A", "A", [curso(1, "A-1", 5, ("lunes", 7, 9))])
+    b = Clase(2, "B", "B", [curso(2, "B-tarde", 5, ("lunes", 13, 15)), curso(3, "B-seguida", 5, ("lunes", 9, 11))])
+    prefs = [PreferenciaClase(a), PreferenciaClase(b)]
+    assert [c.codigo for c in mejor_horario(prefs).cursos] == ["A-1", "B-tarde"]  # empate: gana el primero
+    resultado = mejor_horario(prefs, preferencia_sin_huecos=True)
+    assert [c.codigo for c in resultado.cursos] == ["A-1", "B-seguida"]
+    assert resultado.puntaje == (0, 2, 0.0)
+
+
+def test_sin_huecos_no_hace_perder_clases() -> None:
+    a = Clase(1, "A", "A", [curso(1, "A-1", 5, ("lunes", 7, 9))])
+    b = Clase(2, "B", "B", [curso(2, "B-tarde", 5, ("lunes", 13, 15))])
+    resultado = mejor_horario([PreferenciaClase(a), PreferenciaClase(b)], preferencia_sin_huecos=True)
+    assert len(resultado.cursos) == 2
+    assert resultado.puntaje == pytest.approx((0, 2, -4 / 12))
+
+
+def test_sin_huecos_cuenta_las_horas_ya_ocupadas() -> None:
+    ocupado = mascara(("lunes", 7, 9))
+    b = Clase(2, "B", "B", [curso(2, "B-tarde", 5, ("lunes", 13, 15)), curso(3, "B-seguida", 5, ("lunes", 9, 11))])
+    resultado = mejor_horario([PreferenciaClase(b)], firma_inicial=ocupado, preferencia_sin_huecos=True)
+    assert [c.codigo for c in resultado.cursos] == ["B-seguida"]
+
+
+def test_sin_huecos_no_agranda_la_tabla() -> None:
+    prefs = instancia_ejemplo()
+    assert mejor_horario(prefs, preferencia_sin_huecos=True).entradas_tabla == mejor_horario(prefs).entradas_tabla

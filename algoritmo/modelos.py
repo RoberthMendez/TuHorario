@@ -1,6 +1,6 @@
 """Entidades de entrada del algoritmo (subconjunto de los TADs de docs/).
 
-Solo se modela lo que usan los Niveles 1 a 6 (clases, cursos, horarios, cupos,
+Solo se modela lo que usan los Niveles 1 a 7 (clases, cursos, horarios, cupos,
 prioridad de cada clase, franjas habilitadas, profesores, compañeros y
 salones/edificios). Los niveles siguientes agregan campos (profesor, salones, preferencias…) sin
 cambiar la recurrencia de la PD.
@@ -169,6 +169,8 @@ class PreferenciasDeEstudiante:
     estudiantes_restringidos: list["Estudiante"] = field(default_factory=list)
     # Nivel 6: prefiere que las clases seguidas sean en edificios cercanos.
     preferencia_cercania: bool = False
+    # Nivel 7: prefiere evitar horas libres entre clases del mismo día.
+    preferencia_sin_huecos: bool = False
 
 
 @dataclass(eq=False)

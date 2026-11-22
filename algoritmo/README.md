@@ -4,7 +4,7 @@ Módulo de Python independiente con el algoritmo de asignación de horarios de
 TuHorario. **No** importa nada del backend ni de FastAPI; el backend lo usará
 como una librería más.
 
-## Estado: Niveles 1 a 6 (clases y cupos, prioridad, franjas horarias, profesores, compañeros y cercanía)
+## Estado: Niveles 1 a 7 (clases y cupos, prioridad, franjas horarias, profesores, compañeros, cercanía y huecos)
 
 - Puntaje por estudiante: `(prioritarias, no_prioritarias, satisfaccion)`,
   comparado lexicográficamente: una prioritaria más le gana a cualquier
@@ -26,6 +26,10 @@ como una librería más.
   ser `(mascara, edificios)` y en el caso base se resta `distancia /
   distancia_máxima` por cada clase que empieza justo cuando termina la
   anterior el mismo día (sin hueco) (`cercania.py`).
+- Sin huecos (Nivel 7, solo si `preferencia_sin_huecos`): en el caso base se
+  resta `horas de hueco / 12`, con las horas de hueco de cada día =
+  `(último − primero + 1) − bloques ocupados` sobre la máscara final
+  (`huecos.py`). No agranda el estado.
 - Dos rondas globales: primero todos inscriben sus prioritarias; después sus
   no prioritarias, sin cruzarse con lo ya inscrito.
 - `python traza.py` muestra el algoritmo paso a paso.
@@ -38,6 +42,7 @@ como una librería más.
 | `profesores.py` | Filtro de profesor vetado y satisfacción por calificación (Nivel 4). |
 | `companeros.py` | Bono de amigos / penalización de excluidos y orden por componentes (Nivel 5). |
 | `cercania.py` | Sesiones con edificio, distancias entre edificios y penalización por traslados (Nivel 6). |
+| `huecos.py` | Horas de hueco por día a partir de la máscara (Nivel 7). |
 | `pd_estudiante.py` | `mejor_horario`: PD exacta `f(i, firma)` por estudiante. |
 | `asignacion.py` | `asignar_horarios`: orden sorteado con semilla, dos rondas (prioritarias / no prioritarias) y fase de mejora. |
 | `traza.py` | Ejemplo que imprime cada paso de la PD y de las rondas. |

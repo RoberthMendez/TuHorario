@@ -64,6 +64,7 @@ def generar_instancia(
     prob_exclusion: float = 0.05,
     num_edificios: int = 6,
     prob_cercania: float = 0.3,
+    prob_sin_huecos: float = 0.3,
     semilla: int | None = None,
 ) -> tuple[list[Clase], list[Estudiante]]:
     rng = random.Random(semilla)
@@ -99,6 +100,7 @@ def generar_instancia(
             _franjas_aleatorias(rng, prob_dia_con_franja),
             _calificaciones_aleatorias(rng, elegidas, profes_calificados),
             preferencia_cercania=rng.random() < prob_cercania,
+            preferencia_sin_huecos=rng.random() < prob_sin_huecos,
         )
         estudiantes.append(Estudiante(id=id_estudiante, preferencias=preferencias))
 

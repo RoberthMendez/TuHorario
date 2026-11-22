@@ -1,4 +1,4 @@
-"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 6).
+"""Muestra paso a paso cómo funciona el algoritmo (Niveles 1 a 7).
 
 Uso, desde la raíz del repo:  python -m algoritmo.traza
 (también funciona con el botón ▶ de VS Code o ``python algoritmo/traza.py``).
@@ -143,6 +143,8 @@ PROFES = [
 # Calculo-D (Perez 3 > Gomez 2), pero Calculo-D es en Ciencias y el lunes
 # empieza justo cuando termina Fisica-A, que es en Ingenieria (el otro extremo).
 CERCANIA = True
+# Nivel 7: también pide un horario sin huecos.
+SIN_HUECOS = True
 
 
 def titulo(texto: str) -> None:
@@ -164,9 +166,10 @@ def main() -> None:
     print(f"Franjas habilitadas: {describir_franjas(FRANJAS)}")
     print(f"Calificaciones de profesores: {describir_profes(PROFES)}")
     print(f"Cercanía: {'sí' if CERCANIA else 'no'}")
+    print(f"Sin huecos: {'sí' if SIN_HUECOS else 'no'}")
     print()
     resultado = mejor_horario(PREFERENCIAS, traza=print, franjas_habilitadas=FRANJAS, preferencia_profes=PROFES,
-                              preferencia_cercania=CERCANIA)
+                              preferencia_cercania=CERCANIA, preferencia_sin_huecos=SIN_HUECOS)
     print(f"\nPuntaje (prioritarias, no prioritarias, satisfacción): {formato(resultado.puntaje)}")
     print(f"Horario: {[c.codigo for c in resultado.cursos]}")
     print(f"Entradas en la tabla: {resultado.entradas_tabla}")
@@ -208,6 +211,8 @@ def main() -> None:
     beto.preferencias.estudiantes_restringidos = [dani]
     # Nivel 6: Dani pide cercanía.
     dani.preferencias.preferencia_cercania = True
+    # Nivel 7: Beto pide un horario sin huecos.
+    beto.preferencias.preferencia_sin_huecos = True
 
     global_ = asignar_horarios(estudiantes, semilla=2026, traza=print)
     print(f"\nPrioritarias asignadas: {global_.prioritarias_asignadas}/{global_.prioritarias_solicitadas}")
@@ -240,6 +245,7 @@ def main() -> None:
         print(f"  Compañeros pedidos: {amigos or 'ninguno'}")
         print(f"  Estudiantes excluidos: {excluidos or 'ninguno'}")
         print(f"  Cercanía: {'sí' if e.preferencias.preferencia_cercania else 'no'}")
+        print(f"  Sin huecos: {'sí' if e.preferencias.preferencia_sin_huecos else 'no'}")
         faltan = ", ".join(p.clase.nombre for p in global_.no_asignadas[e.id])
         detalle = f"puntaje {formato(global_.puntajes[e.id])}" + (f", sin asignar: {faltan}" if faltan else "")
         imprimir_horario(f"Horario de {e.nombre} [{detalle}]", global_.horarios[e.id], franjas)

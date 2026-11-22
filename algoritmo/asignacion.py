@@ -1,4 +1,4 @@
-"""Coordinación global (Niveles 1 a 6).
+"""Coordinación global (Niveles 1 a 7).
 
 1. Orden: sorteo con semilla, reordenado para que los estudiantes de cada
    componente conexa del grafo de amistad queden seguidos (así los amigos se
@@ -37,6 +37,7 @@ from dataclasses import dataclass
 from algoritmo.cercania import Campus, penalizacion_cursos
 from algoritmo.companeros import construir_red, ordenar_por_componentes, satisfaccion_companeros
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
+from algoritmo.huecos import penalizacion_huecos
 from algoritmo.modelos import Curso, Estudiante, PreferenciaClase
 from algoritmo.pd_estudiante import CERO, Puntaje, formato, mejor_horario, sumar
 from algoritmo.profesores import calificaciones, satisfaccion_profesor
@@ -81,7 +82,7 @@ class ResultadoAsignacion:
 
     @property
     def satisfaccion_promedio(self) -> float:
-        """Satisfacción promedio por clase asignada (franjas + profesor + compañeros − cercanía)."""
+        """Satisfacción promedio por clase asignada (franjas + profesor + compañeros − cercanía − huecos)."""
         asignadas = self.clases_asignadas
         return sum(p[2] for p in self.puntajes.values()) / asignadas if asignadas else 0.0
 
@@ -164,6 +165,7 @@ def asignar_horarios(
             preferencia_cercania=e.preferencias.preferencia_cercania,
             cursos_fijos=horarios[e.id],
             campus=campus,
+            preferencia_sin_huecos=e.preferencias.preferencia_sin_huecos,
         )
         entradas += resultado.entradas_tabla
         return resultado
@@ -183,6 +185,11 @@ def asignar_horarios(
             )
         if por_id[e_id].preferencias.preferencia_cercania:
             satisf -= penalizacion_cursos(horarios[e_id], campus)
+        if por_id[e_id].preferencias.preferencia_sin_huecos:
+            mascara = 0
+            for c in horarios[e_id]:
+                mascara |= c.mascara
+            satisf -= penalizacion_huecos(mascara)
         return (prio, no_prio, satisf)
 
     def puntaje_de_grupo(ids: set[int]) -> Puntaje:

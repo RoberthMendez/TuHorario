@@ -279,3 +279,18 @@ def test_ronda_2_usa_los_edificios_de_la_ronda_1() -> None:
     e.preferencias.preferencia_cercania = False
     resultado = asignar_horarios([e], semilla=0, pasadas_mejora=0)
     assert [c.codigo for c in resultado.horarios[1]] == ["P-1", "N-lejos"]
+
+
+# ---------------------------------------------------------------- Nivel 7
+
+def test_ronda_2_evita_huecos_con_lo_de_la_ronda_1() -> None:
+    p = clase_un_curso(1, cupo=5, inicio="07:00", fin="09:00")
+    n = Clase(2, "N", "N", [
+        Curso(2, "N-tarde", 5, [Horario.crear("lunes", "14:00", "16:00")]),
+        Curso(3, "N-seguida", 5, [Horario.crear("lunes", "09:00", "11:00")]),
+    ])
+    e = estudiante(1, (p, True), (n, False))
+    e.preferencias.preferencia_sin_huecos = True
+    resultado = asignar_horarios([e], semilla=0, pasadas_mejora=0)
+    assert [c.codigo for c in resultado.horarios[1]] == ["K1-1", "N-seguida"]
+    assert resultado.puntajes[1] == (1, 1, 0.0)

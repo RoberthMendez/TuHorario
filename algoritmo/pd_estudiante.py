@@ -5,7 +5,7 @@ ocupada. La firma es ``(mascara, edificios)``: las horas ocupadas y, solo si
 el estudiante pidió cercanía (Nivel 6), la tupla ordenada de sesiones con su
 edificio (sin cercanía es siempre ``()`` y el estado es el mismo de antes)::
 
-    f(n, firma) = (0, 0, −penalización_cercanía(edificios))
+    f(n, firma) = (0, 0, −penalización_cercanía(edificios) − penalización_huecos(mascara))
     f(i, firma) = max( f(i+1, firma),                                  # no inscribir la clase i
                        max_{c ∈ opciones(i), mascara & m[c] == 0}
                            ganancia(i, c) + f(i+1, firma ⊕ c) )         # inscribir el curso c
@@ -13,14 +13,14 @@ edificio (sin cercanía es siempre ``()`` y el estado es el mismo de antes)::
 
 con ``firma ⊕ c = (mascara | m[c], edificios + sesiones de c, ordenada)``.
 
-Roles de las restricciones (Niveles 1 a 6):
+Roles de las restricciones (Niveles 1 a 7):
 
 - Dimensión de la tabla: índice de clase ``i``, horas ocupadas ``mascara`` y
   edificios de cada sesión (solo con cercanía).
 - Filtro (al construir ``opciones``): ``cupo > 0`` y profesor con
   calificación distinta de 0. En la recursión: no cruce (``mascara & m[c] == 0``).
 - Término del puntaje: prioridad de la clase, franjas horarias, profesor,
-  compañeros y cercanía.
+  compañeros, cercanía y huecos.
 
 Puntaje = ``(prioritarias, no_prioritarias, satisfaccion)``: inscribir el
 curso c de una clase prioritaria suma ``(1, 0, s_c)`` y de una no prioritaria
@@ -35,9 +35,10 @@ curso c de una clase prioritaria suma ``(1, 0, s_c)`` y de una no prioritaria
   (``companeros.py``); lo calcula la coordinación global y llega en
   ``bono_companeros``.
 
-Esos tres se precalculan una vez por llamada. La cercanía no es por curso
-(depende de qué clase va junto a cuál), así que se resta en el caso base
-(``cercania.py``).
+Esos tres se precalculan una vez por llamada. La cercanía y los huecos no son
+por curso (dependen de qué clase va junto a cuál), así que se restan en el
+caso base (``cercania.py`` y ``huecos.py``). Los huecos solo dependen de la
+máscara, que ya está en el estado: no agrandan la tabla.
 
 Las tuplas se suman componente a componente y se comparan
 lexicográficamente:
@@ -62,6 +63,7 @@ from dataclasses import dataclass
 
 from algoritmo.cercania import Campus, Sesion, agregar, sesiones_con_edificio
 from algoritmo.franjas import mascara_franjas, satisfaccion_franjas
+from algoritmo.huecos import horas_de_hueco, penalizacion_huecos
 from algoritmo.modelos import Curso, Horario, PreferenciaClase, PreferenciaProfe
 from algoritmo.profesores import calificacion_de, calificaciones, profesor_vetado, satisfaccion_profesor
 from algoritmo.tiempo import DIAS, HORA_INICIO, HORAS_POR_DIA, describir_mascara
@@ -103,6 +105,7 @@ def mejor_horario(
     preferencia_cercania: bool = False,
     cursos_fijos: list[Curso] | None = None,
     campus: Campus | None = None,
+    preferencia_sin_huecos: bool = False,
 ) -> ResultadoEstudiante:
     """Calcula el horario óptimo de un estudiante para las clases pedidas.
 
@@ -122,6 +125,10 @@ def mejor_horario(
     edificios lejanos. ``cursos_fijos`` son los cursos que el estudiante ya
     tiene (sus sesiones cuentan para los traslados) y ``campus`` trae las
     distancias; si falta, se arma con los cursos de esta llamada.
+
+    Nivel 7: con ``preferencia_sin_huecos`` se penalizan las horas libres
+    entre clases del mismo día (``huecos.py``), incluidas las de
+    ``firma_inicial``.
 
     ``traza`` (opcional, p. ej. ``print``) recibe una línea por cada paso de la
     recursión; solo sirve para ver el algoritmo funcionando.
@@ -183,12 +190,23 @@ def mejor_horario(
 
     def f(i: int, firma: int, edificios: tuple[Sesion, ...]) -> Puntaje:
         if i == n:
+            # Términos que dependen del horario completo: se calculan aquí.
+            motivos = []
+            penalizacion = 0.0
             if preferencia_cercania and campus is not None and edificios:
-                valor = (0, 0, 0.0 - campus.penalizacion(edificios))  # 0.0 - x evita imprimir "-0"
-                log(i, lambda: f"f({i}, …) = {formato(valor)}  ← caso base: penalización por traslados {-valor[2]:.3g}")
-                return valor
-            log(i, lambda: f"f({i}, …) = {formato(CERO)}  ← caso base: no quedan clases")
-            return CERO
+                traslados = campus.penalizacion(edificios)
+                penalizacion += traslados
+                motivos.append(f"traslados {traslados:.3g}")
+            if preferencia_sin_huecos:
+                horas = horas_de_hueco(firma)
+                penalizacion += penalizacion_huecos(firma)
+                motivos.append(f"{horas} h de hueco")
+            if not motivos:
+                log(i, lambda: f"f({i}, …) = {formato(CERO)}  ← caso base: no quedan clases")
+                return CERO
+            valor = (0, 0, 0.0 - penalizacion)  # 0.0 - x evita imprimir "-0"
+            log(i, lambda: f"f({i}, …) = {formato(valor)}  ← caso base: penalización por {', '.join(motivos)}")
+            return valor
         clave = (i, firma, edificios)
         if clave in tabla:
             log(i, lambda: f"f({i}, {describir(firma, edificios)}) = {formato(tabla[clave])}"
