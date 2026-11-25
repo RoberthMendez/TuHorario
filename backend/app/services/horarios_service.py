@@ -11,7 +11,8 @@
      falla con ``KeyError`` en la fase de mejora).
 3. Ejecuta ``asignar_horarios`` con una semilla fija (reproducible) y guarda
    las inscripciones (TAD ``Curso.listaEstudiantes``).
-4. Devuelve los horarios leídos de la base, igual que ``GET /horarios``.
+4. Devuelve los horarios leídos de la base, igual que ``GET /horarios``, con
+   las preferencias que no se cumplieron (``cumplimiento_service``).
 """
 
 from sqlalchemy.orm import Session
@@ -33,6 +34,7 @@ from app.schemas import (
     SalonOut,
     SesionOut,
 )
+from app.services import cumplimiento_service
 
 SEMILLA = 2026
 
@@ -133,11 +135,19 @@ def generar(db: Session, ids_estudiantes: list[int]) -> list[HorarioEstudianteOu
 
 
 def obtener(db: Session, ids_estudiantes: list[int]) -> list[HorarioEstudianteOut]:
-    """Horario guardado de cada estudiante y las clases que pidió y no quedaron inscritas."""
+    """Horario guardado de cada estudiante, las clases que no quedaron inscritas
+    y todas las preferencias que no se cumplieron."""
     ids = list(dict.fromkeys(ids_estudiantes))
     estudiantes = _estudiantes_existentes(db, ids)
     preferencias = preferencias_repo.de_estudiantes(db, set(ids))
-    cursos = inscripciones_repo.cursos_de_estudiantes(db, set(ids))
+    # También los cursos de sus compañeros y restringidos (aunque no estén en la corrida).
+    otros = set()
+    for p in preferencias.values():
+        otros |= {pe.estudiante_preferido_id for pe in p.preferencia_estudiantes}
+        otros |= {r.id for r in p.estudiantes_restringidos}
+    cursos = inscripciones_repo.cursos_de_estudiantes(db, set(ids) | otros)
+    calificados = {pp.profesor_id for p in preferencias.values() for pp in p.preferencia_profes}
+    clases_de_profesor = catalogo_repo.clases_de_profesores(db, calificados) if calificados else {}
 
     horarios = []
     for i in ids:
@@ -154,6 +164,9 @@ def obtener(db: Session, ids_estudiantes: list[int]) -> list[HorarioEstudianteOu
                     for pc in pedidas
                     if pc.clase_id not in tomadas
                 ],
+                preferencias_no_cumplidas=cumplimiento_service.no_cumplidas(
+                    preferencias.get(i), mis_cursos, cursos, clases_de_profesor
+                ),
             )
         )
     return horarios

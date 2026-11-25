@@ -10,6 +10,9 @@ _CARGAR_TODO = (
     selectinload(PreferenciasDeEstudiante.franjas_habilitadas),
     selectinload(PreferenciasDeEstudiante.preferencia_profes).selectinload(PreferenciaProfe.profesor),
     selectinload(PreferenciasDeEstudiante.preferencia_estudiantes).selectinload(PreferenciaCompanero.clase),
+    selectinload(PreferenciasDeEstudiante.preferencia_estudiantes).selectinload(
+        PreferenciaCompanero.estudiante_preferido
+    ),
     selectinload(PreferenciasDeEstudiante.estudiantes_restringidos),
     selectinload(PreferenciasDeEstudiante.prioridad_preferencias),
 )

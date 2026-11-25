@@ -97,6 +97,9 @@ def test_respeta_cupos_y_prioritarias_primero(client, db: Session) -> None:
     assert horarios[otro]["clasesNoAsignadas"] == [
         {"clase": {"id": ANALISIS, "codigo": "SIS-301", "nombre": "Análisis de Algoritmos"}, "prioridad": False}
     ]
+    assert horarios[otro]["preferenciasNoCumplidas"] == [
+        {"tipo": "clases", "detalle": "No te asignaron Análisis de Algoritmos.", "idClase": ANALISIS}
+    ]
     por_curso = Counter(c for (c, _) in db.execute(select(inscripciones.c.curso_id, inscripciones.c.estudiante_id)))
     assert max(por_curso.values()) == 1
 
@@ -112,7 +115,7 @@ def test_cupo_ocupado_por_otra_corrida(client, db: Session) -> None:
     assert len(generar(client, [primeros[0]])[0]["cursos"]) == 1
 
 
-def test_companero_fuera_de_la_corrida_no_rompe(client) -> None:
+def test_companero_fuera_de_la_corrida_no_rompe(client, db: Session) -> None:
     beto = crear(client, "Beto Díaz", {"clases": [{"idClase": 1}]})
     caro = crear(client, "Caro León", {"clases": [{"idClase": 1}]})
     ana = crear(
@@ -127,12 +130,29 @@ def test_companero_fuera_de_la_corrida_no_rompe(client) -> None:
     horarios = generar(client, [ana])
     assert len(horarios) == 1
     assert len(horarios[0]["cursos"]) == 2
+    # Beto no se generó (no tiene cursos): su preferencia no se cumple. Caro tampoco
+    # está inscrito, así que la restricción sí se cumple.
+    assert horarios[0]["preferenciasNoCumplidas"] == [
+        {
+            "tipo": "estudiantes",
+            "detalle": "No quedaste con Beto Díaz en Cálculo Diferencial: Beto Díaz no quedó inscrito en esa clase.",
+            "idClase": 1,
+        }
+    ]
+
+    # Si Caro queda en el mismo curso que Ana, se reporta.
+    curso_ana = next(c for c in horarios[0]["cursos"] if c["clase"]["id"] == 1)
+    db.execute(inscripciones.insert().values(curso_id=curso_ana["id"], estudiante_id=caro))
+    db.commit()
+    [leido] = client.get("/horarios", params={"estudiantes": ana}).json()
+    detalle = f"Quedaste con Caro León en Cálculo Diferencial ({curso_ana['codigo']})."
+    assert {"tipo": "estudiantes", "detalle": detalle, "idClase": 1} in leido["preferenciasNoCumplidas"]
 
 
 def test_estudiante_sin_preferencias_e_inexistente(client) -> None:
     solo = crear(client, "Sin Nada")
     assert generar(client, [solo]) == [
-        {"idEstudiante": solo, "nombre": "Sin Nada", "cursos": [], "clasesNoAsignadas": []}
+        {"idEstudiante": solo, "nombre": "Sin Nada", "cursos": [], "clasesNoAsignadas": [], "preferenciasNoCumplidas": []}
     ]
     assert client.post("/horarios/generar", json={"idsEstudiantes": [solo, 999]}).status_code == 404
     assert client.post("/horarios/generar", json={"idsEstudiantes": []}).status_code == 422
