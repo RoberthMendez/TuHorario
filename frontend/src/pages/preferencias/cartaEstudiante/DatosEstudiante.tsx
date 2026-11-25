@@ -4,7 +4,7 @@ import iconoCorreo from '../../../assets/cartaEstudiante/icono-correo.svg'
 import iconoTelefono from '../../../assets/cartaEstudiante/icono-telefono.svg'
 import type { Estudiante } from '../../../types/Estudiante'
 import DatoEstudiante from './DatoEstudiante'
-import Desplegable from './Desplegable'
+import Desplegable from '../../../components/Desplegable'
 
 interface DatosEstudianteProps {
   estudiante: Estudiante

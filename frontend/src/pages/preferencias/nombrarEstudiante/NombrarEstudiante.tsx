@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import InsigniaNumero from '../cartaEstudiante/InsigniaNumero'
+import InsigniaNumero from '../../../components/InsigniaNumero'
 import FondoBloqueo from './FondoBloqueo'
 import FormularioNombre, {
   type ControlFormularioNombre,

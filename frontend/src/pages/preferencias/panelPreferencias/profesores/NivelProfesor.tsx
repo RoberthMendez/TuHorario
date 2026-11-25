@@ -1,5 +1,5 @@
 import type { Genero, NivelPreferencia } from '../../../../types/Preferencias'
-import { FONDO_NIVEL } from '../colores'
+import { FONDO_NIVEL } from '../../../../styles/colores'
 import AvatarProfesor from './avatarProfesor/AvatarProfesor'
 
 interface NivelProfesorProps {

@@ -1,4 +1,4 @@
-import type { ColorPastel, NivelPreferencia } from '../../../types/Preferencias'
+import type { ColorPastel, NivelPreferencia } from '../types/Preferencias'
 
 // Clases completas de Tailwind (no se pueden armar dinámicamente).
 
@@ -23,6 +23,19 @@ export const BORDE_ACENTO: Record<ColorPastel, string> = {
   mabel: 'border-pelorous',
   snuff: 'border-hopbush',
   wheatfield: 'border-sahara',
+}
+
+// Acento de cada pastel como relleno (el punto del profesor en los bloques
+// del horario armado).
+export const FONDO_ACENTO: Record<ColorPastel, string> = {
+  beeswax: 'bg-buttercup',
+  'white-ice': 'bg-mountain-meadow',
+  'tuft-bush': 'bg-crusta',
+  'titan-white': 'bg-ship-cove',
+  'carousel-pink': 'bg-hopbush',
+  mabel: 'bg-pelorous',
+  snuff: 'bg-hopbush',
+  wheatfield: 'bg-sahara',
 }
 
 // Fondo de la ficha numérica de cada nivel de profesor (leyenda 0–3).

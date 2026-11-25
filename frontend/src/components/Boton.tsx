@@ -2,8 +2,11 @@ interface BotonProps {
   texto: string
   icono?: string
   onClick?: () => void
-  /** `inicio`: estilo de la Landing. `panel`: estilo de las pantallas internas. */
-  variante?: 'inicio' | 'panel'
+  /**
+   * `inicio`: estilo de la Landing. `panel`: estilo de las pantallas
+   * internas. `claro`: como `panel` pero blanco, para la acción secundaria.
+   */
+  variante?: 'inicio' | 'panel' | 'claro'
   /** Mientras se espera una respuesta: no responde y muestra cursor de espera. */
   ocupado?: boolean
 }
@@ -23,6 +26,12 @@ const estilos = {
       caja: 'size-10.5 bg-bunting',
       icono: 'size-6',
     },
+  claro: {
+    boton:
+      'h-18.5 gap-7.5 rounded-seccion border-bunting bg-white pr-4 pl-8 font-jakarta text-22 font-extrabold text-bunting [--boton-3d-color:var(--color-bunting)]',
+    caja: 'size-10.5 border-2 border-bunting bg-supernova',
+    icono: 'size-6',
+  },
 }
 
 // Botón amarillo con efecto 3D (`boton-3d`, definido en styles/tema.css).

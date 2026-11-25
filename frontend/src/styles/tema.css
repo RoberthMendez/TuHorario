@@ -52,6 +52,8 @@
   --color-fair-pink: #fdecec;
   --color-alizarin: #d93b3b;
   --color-alizarin-oscuro: #b3261e;
+  /* Ficha de una preferencia sin cumplir (pantalla de horarios). */
+  --color-carmesi: #c62828;
   /* Pasteles (fondos de clases, filas y tarjetas) */
   --color-beeswax: #fff1c7;
   --color-white-ice: #d9f3e8;
@@ -104,6 +106,13 @@
   --animate-sacudir: sacudir 0.45s ease-out;
   /* "Así no": la carta de un estudiante sin nombre niega de lado a lado. */
   --animate-negar: negar 0.42s ease-in-out;
+  /* Pantalla de carga de los horarios: las piezas del logo llegan girando y
+     encajan (con un "clic" del rompecabezas al completarse), los bloques del
+     mini horario se van llenando uno a uno y los puntos saltan. */
+  --animate-encajar: encajar 3.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  --animate-clic: clic 3.2s ease-out infinite;
+  --animate-llenar: llenar 4.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  --animate-saltar: saltar 1.2s ease-in-out infinite;
 
   @keyframes entrar {
     from {
@@ -244,6 +253,67 @@
     to {
       opacity: 0;
       transform: scale(0.2) rotate(-10deg);
+    }
+  }
+  @keyframes encajar {
+    0% {
+      opacity: 0;
+      transform: translate(var(--desde-x), var(--desde-y))
+        rotate(var(--desde-giro)) scale(0.7);
+    }
+    30%,
+    80% {
+      opacity: 1;
+      transform: none;
+      animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+    }
+    95%,
+    100% {
+      opacity: 0;
+      transform: translate(var(--desde-x), var(--desde-y))
+        rotate(var(--desde-giro)) scale(0.7);
+    }
+  }
+  @keyframes clic {
+    0%,
+    38% {
+      transform: none;
+    }
+    43% {
+      transform: scale(1.08) rotate(-3deg);
+    }
+    50% {
+      transform: scale(0.97);
+    }
+    56% {
+      transform: none;
+    }
+  }
+  @keyframes llenar {
+    0% {
+      opacity: 0;
+      transform: scale(0.3) rotate(-14deg);
+    }
+    10%,
+    75% {
+      opacity: 1;
+      transform: none;
+      animation-timing-function: ease-in;
+    }
+    85%,
+    100% {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+  }
+  @keyframes saltar {
+    0%,
+    60%,
+    100% {
+      transform: none;
+    }
+    30% {
+      transform: translateY(calc(var(--u) * -7));
     }
   }
   @keyframes golpe {

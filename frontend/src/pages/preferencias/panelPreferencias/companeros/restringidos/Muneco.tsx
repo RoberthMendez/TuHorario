@@ -1,5 +1,8 @@
 import { useEffect, useEffectEvent, useRef } from 'react'
-import { FONDO_COMPANERO, RELLENO_COMPANERO } from '../../colores'
+import {
+  FONDO_COMPANERO,
+  RELLENO_COMPANERO,
+} from '../../../../../styles/colores'
 import Mano from './Mano'
 import Persona from './Persona'
 

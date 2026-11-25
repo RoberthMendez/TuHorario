@@ -20,7 +20,7 @@ import {
 } from './preferenciasOpcionales'
 import SeccionPrioridad from './prioridad/SeccionPrioridad'
 import SeccionProfesores from './profesores/SeccionProfesores'
-import TituloPanel from './TituloPanel'
+import TituloSubrayado from '../../../components/TituloSubrayado'
 import { companerosVigentes, profesoresVisibles } from './vigentes'
 
 // Lo que dura el cierre de una sección al quitarla.
@@ -264,7 +264,7 @@ export default function PanelPreferencias({
   return (
     <section className="barra-scroll max-h-[calc(100dvh-var(--alto-cabecera,calc(var(--u)*76))-4px-var(--u)*48)] overflow-y-auto border-t-2 border-bunting bg-link-water shadow-panel-interior">
       <div className="flex flex-col gap-5 px-3 pt-7 pb-7 sm:pr-4 sm:pl-6">
-        <TituloPanel />
+        <TituloSubrayado texto="Clases y preferencias" />
         {secciones.map(({ id, contenido, opcional }, i) => {
           const sale = opcional && saliendo.includes(id as IdPreferencia)
           return (

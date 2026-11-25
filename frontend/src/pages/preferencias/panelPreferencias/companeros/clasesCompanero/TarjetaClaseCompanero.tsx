@@ -3,7 +3,7 @@ import type {
   Companero,
   PreferenciaClase,
 } from '../../../../../types/Preferencias'
-import { BORDE_ACENTO, FONDO_PASTEL } from '../../colores'
+import { BORDE_ACENTO, FONDO_PASTEL } from '../../../../../styles/colores'
 import CompanerosDeClase from './CompanerosDeClase'
 
 interface TarjetaClaseCompaneroProps {

@@ -1,8 +1,8 @@
 import type { Ref } from 'react'
 import BotonEliminar from './BotonEliminar'
-import BotonDesplegar from './BotonDesplegar'
+import BotonDesplegar from '../../../components/BotonDesplegar'
 import BotonOjo from './BotonOjo'
-import InsigniaNumero from './InsigniaNumero'
+import InsigniaNumero from '../../../components/InsigniaNumero'
 
 interface CabeceraCartaProps {
   ref?: Ref<HTMLDivElement>
@@ -52,7 +52,7 @@ export default function CabeceraCarta({
         />
         <BotonDesplegar
           abierta={abierta}
-          nombre={nombre}
+          etiqueta={`las preferencias de ${nombre}`}
           idContenido={idContenido}
           onClick={onAlternar}
         />

@@ -12,7 +12,7 @@ import PanelPreferencias from '../panelPreferencias/PanelPreferencias'
 import CabeceraCarta from './CabeceraCarta'
 import ConfirmarEliminar from './ConfirmarEliminar'
 import DatosEstudiante from './DatosEstudiante'
-import Desplegable from './Desplegable'
+import Desplegable from '../../../components/Desplegable'
 
 interface CartaEstudianteProps {
   estudiante: Estudiante

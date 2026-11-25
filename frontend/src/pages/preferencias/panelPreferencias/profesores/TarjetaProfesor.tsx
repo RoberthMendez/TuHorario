@@ -5,7 +5,7 @@ import type {
   PreferenciaProfe,
 } from '../../../../types/Preferencias'
 import BotonQuitar from '../BotonQuitar'
-import { FONDO_PASTEL } from '../colores'
+import { FONDO_PASTEL } from '../../../../styles/colores'
 import AvatarProfesor from './avatarProfesor/AvatarProfesor'
 import ContadorNivel from './ContadorNivel'
 

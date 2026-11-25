@@ -8,7 +8,7 @@ import {
 } from 'react'
 import iconoSeccion from '../../../../assets/prioridad/icono-seccion.svg'
 import { prioridades } from '../../../../data/preferenciasEjemplo'
-import { COLORES_PRIORIDAD } from '../colores'
+import { COLORES_PRIORIDAD } from '../../../../styles/colores'
 import SeccionPreferencia from '../SeccionPreferencia'
 import { useDeslizarAlReordenar } from '../useDeslizarAlReordenar'
 import ElementoPrioridad from './ElementoPrioridad'

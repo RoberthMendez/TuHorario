@@ -1,16 +1,17 @@
-import chevron from '../../../assets/cartaEstudiante/chevron-abajo.svg'
+import chevron from '../assets/chevron-abajo.svg'
 
 interface BotonDesplegarProps {
   abierta: boolean
-  nombre: string
+  /** Lo que muestra/oculta, para el lector de pantalla ("las preferencias de Ana"). */
+  etiqueta: string
   idContenido: string
   onClick: () => void
 }
 
-// Flecha de la carta: gira con rebote al abrir/cerrar.
+// Flecha de una carta desplegable: gira con rebote al abrir/cerrar.
 export default function BotonDesplegar({
   abierta,
-  nombre,
+  etiqueta,
   idContenido,
   onClick,
 }: BotonDesplegarProps) {
@@ -20,7 +21,7 @@ export default function BotonDesplegar({
       onClick={onClick}
       aria-expanded={abierta}
       aria-controls={idContenido}
-      aria-label={`${abierta ? 'Ocultar' : 'Ver'} las preferencias de ${nombre}`}
+      aria-label={`${abierta ? 'Ocultar' : 'Ver'} ${etiqueta}`}
       className="ml-auto flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-icono border-2 border-bunting bg-white transition-[translate,background-color] duration-200 hover:-translate-y-0.5 hover:bg-zircon-21 active:translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sapphire"
     >
       <img

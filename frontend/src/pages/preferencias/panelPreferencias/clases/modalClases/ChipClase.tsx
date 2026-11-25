@@ -1,5 +1,5 @@
 import type { Clase } from '../../../../../types/Preferencias'
-import { colorDeClase, FONDO_PASTEL } from '../../colores'
+import { colorDeClase, FONDO_PASTEL } from '../../../../../styles/colores'
 import ChipSeleccion from '../../modalSeleccion/ChipSeleccion'
 
 interface ChipClaseProps {

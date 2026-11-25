@@ -2,7 +2,7 @@ import type {
   PreferenciaClase,
   Profesor,
 } from '../../../../../types/Preferencias'
-import { FONDO_PASTEL } from '../../colores'
+import { FONDO_PASTEL } from '../../../../../styles/colores'
 import ChipSeleccion from '../../modalSeleccion/ChipSeleccion'
 
 interface ChipProfesorProps {

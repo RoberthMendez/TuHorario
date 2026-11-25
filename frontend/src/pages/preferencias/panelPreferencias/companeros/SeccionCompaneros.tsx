@@ -11,7 +11,7 @@ import type {
   PreferenciaClase,
   PreferenciaCompanero,
 } from '../../../../types/Preferencias'
-import { FONDO_COMPANERO } from '../colores'
+import { FONDO_COMPANERO } from '../../../../styles/colores'
 import SeccionPreferencia from '../SeccionPreferencia'
 import { companerosVigentes } from '../vigentes'
 import BuscadorCompaneros from './buscadorCompaneros/BuscadorCompaneros'

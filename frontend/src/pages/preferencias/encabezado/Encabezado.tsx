@@ -1,4 +1,4 @@
-import Decoracion from './Decoracion'
+import Decoracion from '../../../components/Decoracion'
 import DescripcionEncabezado from './DescripcionEncabezado'
 import TituloEstudiantes from './TituloEstudiantes'
 

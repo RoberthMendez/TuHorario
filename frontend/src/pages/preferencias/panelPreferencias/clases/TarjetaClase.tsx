@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { PreferenciaClase } from '../../../../types/Preferencias'
-import { FONDO_PASTEL } from '../colores'
+import { FONDO_PASTEL } from '../../../../styles/colores'
 import BotonQuitar from '../BotonQuitar'
 import SelloPrioridad from './SelloPrioridad'
 
