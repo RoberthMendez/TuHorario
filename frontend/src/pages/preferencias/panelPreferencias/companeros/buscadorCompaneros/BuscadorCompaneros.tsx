@@ -13,6 +13,8 @@ import ListaSugerencias from './ListaSugerencias'
 import { useBuscarCompaneros } from './useBuscarCompaneros'
 
 interface BuscadorCompanerosProps {
+  /** Estudiante que busca: no aparece en sus propias sugerencias. */
+  idEstudiante: number
   /** Compañero que se está configurando (ocupa el buscador). */
   enEspera: Companero | null
   /** Se está restringiendo: el muñeco ya salió del chip. */
@@ -33,6 +35,7 @@ interface BuscadorCompanerosProps {
  * de la caja hasta que se confirma, se restringe o se suelta.
  */
 export default function BuscadorCompaneros({
+  idEstudiante,
   enEspera,
   restringiendo,
   idsRestringidos,
@@ -49,8 +52,10 @@ export default function BuscadorCompaneros({
   const [idActivo, setIdActivo] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const idLista = useId()
-  const { resultados, cargando, error, reintentar } =
-    useBuscarCompaneros(consulta)
+  const { resultados, cargando, error, reintentar } = useBuscarCompaneros(
+    consulta,
+    idEstudiante,
+  )
 
   // Al soltar, confirmar o restringir un compañero, el foco vuelve a la caja
   // para buscar el siguiente.

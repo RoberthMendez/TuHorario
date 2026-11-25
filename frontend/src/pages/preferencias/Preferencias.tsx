@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import FondoCuadricula from '../../components/FondoCuadricula'
 import Logo from '../../components/Logo'
 import {
   crearEstudiante,
   eliminarEstudiante,
 } from '../../services/estudiantesService'
+import { generarHorarios } from '../../services/horariosService'
+import { guardarPreferencias } from '../../services/preferenciasService'
 import type { Estudiante } from '../../types/Estudiante'
+import type { HorarioEstudiante } from '../../types/HorarioEstudiante'
+import type { PreferenciasEstudiante } from '../../types/Preferencias'
 import CartaEstudiante from './cartaEstudiante/CartaEstudiante'
 import ConfirmarFinal from './ConfirmarFinal'
 import Encabezado from './encabezado/Encabezado'
@@ -26,9 +30,27 @@ import NuevoEstudiante from './NuevoEstudiante'
  * crearlo, su carta se despliega sola con los datos generados. Al eliminar
  * uno, su carta se pliega y las de abajo suben (y se renumeran); sin
  * estudiantes vuelve la bienvenida.
+ *
+ * "Finalizar" guarda las preferencias de cada estudiante en el backend y
+ * genera los horarios de todos. El resultado queda en `horarios` (todavía no
+ * hay pantalla de resultados).
  */
 // Lo que tarda en plegarse la carta de un estudiante eliminado.
 const SALIDA_MS = 320
+
+const SIN_PREFERENCIAS: PreferenciasEstudiante = {
+  clases: [],
+  profesores: [],
+  companeros: [],
+  restringidos: [],
+  franjasHabilitadas: [],
+  preferenciaCercania: false,
+  preferenciaSinHuecos: false,
+  prioridades: [],
+}
+
+const mensajeDe = (error: unknown) =>
+  error instanceof Error ? error.message : 'Error desconocido'
 
 export default function Preferencias() {
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([])
@@ -36,6 +58,22 @@ export default function Preferencias() {
   const [creando, setCreando] = useState(false)
   const [recienCreado, setRecienCreado] = useState<number | null>(null)
   const [eliminando, setEliminando] = useState<number[]>([])
+  const [finalizando, setFinalizando] = useState(false)
+  const [errorFinal, setErrorFinal] = useState<string | null>(null)
+  const [, setHorarios] = useState<HorarioEstudiante[] | null>(null)
+  // Preferencias de cada estudiante (por id), tal como las arma su panel. No
+  // se pintan: solo se envían al finalizar, así que no hace falta re-render.
+  const preferencias = useRef(new Map<number, PreferenciasEstudiante>())
+  // Estudiantes borrados en esta sesión: otros pueden tenerlos aún como
+  // compañeros o restringidos.
+  const eliminados = useRef(new Set<number>())
+
+  const cambiarPreferencias = useCallback(
+    (id: number, nuevas: PreferenciasEstudiante) => {
+      preferencias.current.set(id, nuevas)
+    },
+    [],
+  )
 
   const crear = async (nombre: string) => {
     setCreando(true)
@@ -44,8 +82,38 @@ export default function Preferencias() {
       setEstudiantes((lista) => [...lista, nuevo])
       setRecienCreado(nuevo.id)
       setNombrando(false)
+    } catch (error) {
+      console.error('No se pudo crear el estudiante:', error)
     } finally {
       setCreando(false)
+    }
+  }
+
+  const finalizar = async () => {
+    setFinalizando(true)
+    setErrorFinal(null)
+    try {
+      const ids = estudiantes.map((e) => e.id)
+      const vivo = (c: { id: number }) => !eliminados.current.has(c.id)
+      await Promise.all(
+        ids.map((id) => {
+          const p = preferencias.current.get(id) ?? SIN_PREFERENCIAS
+          return guardarPreferencias(id, {
+            ...p,
+            companeros: p.companeros.filter((c) => vivo(c.estudiantePreferido)),
+            restringidos: p.restringidos.filter(vivo),
+          })
+        }),
+      )
+      const resultado = await generarHorarios(ids)
+      setHorarios(resultado)
+      console.info('Horarios generados:', resultado)
+    } catch (error) {
+      setErrorFinal(
+        `No pudimos generar los horarios: ${mensajeDe(error)}. Revisa que el servidor esté corriendo e inténtalo de nuevo.`,
+      )
+    } finally {
+      setFinalizando(false)
     }
   }
 
@@ -61,6 +129,10 @@ export default function Preferencias() {
         new Promise((listo) => setTimeout(listo, salida)),
       ])
       setEstudiantes((lista) => lista.filter((e) => e.id !== id))
+      preferencias.current.delete(id)
+      eliminados.current.add(id)
+    } catch (error) {
+      console.error('No se pudo eliminar el estudiante:', error)
     } finally {
       setEliminando((ids) => ids.filter((x) => x !== id))
     }
@@ -106,6 +178,7 @@ export default function Preferencias() {
                         abrirAlMontar={estudiante.id === recienCreado}
                         eliminando={sale}
                         onEliminar={() => eliminar(estudiante.id)}
+                        onCambiarPreferencias={cambiarPreferencias}
                       />
                     </div>
                   </div>
@@ -142,7 +215,11 @@ export default function Preferencias() {
             inert={nombrando}
             className="mt-10.5 animate-entrar escritorio:mx-1.5"
           >
-            <ConfirmarFinal />
+            <ConfirmarFinal
+              onFinalizar={finalizar}
+              finalizando={finalizando}
+              error={errorFinal}
+            />
           </div>
         )}
       </div>

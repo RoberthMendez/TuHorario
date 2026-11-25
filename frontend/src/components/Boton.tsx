@@ -4,6 +4,8 @@ interface BotonProps {
   onClick?: () => void
   /** `inicio`: estilo de la Landing. `panel`: estilo de las pantallas internas. */
   variante?: 'inicio' | 'panel'
+  /** Mientras se espera una respuesta: no responde y muestra cursor de espera. */
+  ocupado?: boolean
 }
 
 const estilos = {
@@ -29,18 +31,21 @@ export default function Boton({
   icono,
   onClick,
   variante = 'inicio',
+  ocupado = false,
 }: BotonProps) {
   const estilo = estilos[variante]
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`boton-3d inline-flex shrink-0 items-center border-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cerulean ${estilo.boton}`}
+      disabled={ocupado}
+      aria-busy={ocupado || undefined}
+      className={`boton-3d inline-flex shrink-0 items-center border-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cerulean disabled:pointer-events-none disabled:opacity-80 ${estilo.boton}`}
     >
       {texto}
       {icono && (
         <span
-          className={`flex items-center justify-center rounded-icono ${estilo.caja}`}
+          className={`flex items-center justify-center rounded-icono ${estilo.caja} ${ocupado ? 'animate-pulse motion-reduce:animate-none' : ''}`}
         >
           <img src={icono} alt="" className={estilo.icono} />
         </span>

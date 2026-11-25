@@ -18,8 +18,15 @@ documento de la primera entrega, con los TADs, está en `docs/`.
 ## Estructura
 
 - `frontend/src/` — `assets/`, `components/`, `pages/`, `types/`, `data/` (mocks), `services/` (acceso a la API), `styles/`.
-- `backend/app/` — `api/`, `core/` (config), `models/`, `schemas/`, `services/`, `db/`, `main.py`.
-- `backend/tests/` — tests con pytest.
+- `backend/app/` — en capas:
+  - `api/`: routers. Solo validan con los schemas, llaman al servicio y responden.
+  - `services/`: la lógica de negocio.
+  - `repositories/`: todas las consultas con SQLAlchemy 2.x; los servicios no escriben SQL.
+  - `models/` (ORM) y `schemas/` (Pydantic, camelCase con `alias_generator=to_camel`).
+  - `db/`: engine, `SessionLocal`, `Base`, `get_db` y `semilla.py`.
+  - `core/`: `config.py`, `errores.py` (`NoEncontrado` → 404, `ReglaNegocio` → 400, `Conflicto` → 409) y `dias.py`.
+  - `main.py`.
+- `backend/tests/` — tests con pytest sobre SQLite en memoria (`conftest.py` sobreescribe `get_db`).
 - `algoritmo/` — paquete Python con su propio `tests/`; no importa nada del backend ni de FastAPI.
 - `docs/` — documentación. No modificar el PDF de la entrega.
 - Configuración por variables de entorno en `.env` (plantilla: `.env.example`).
@@ -38,7 +45,7 @@ cd frontend && npm run lint
 cd frontend && npm run format
 
 # Backend (con .venv activado)
-cd backend && uvicorn app.main:app --reload   # http://localhost:8000/health
+cd backend && uvicorn app.main:app --reload   # http://localhost:8000/docs (requiere Postgres)
 cd backend && pytest
 
 # Algoritmo (con su .venv activado)
@@ -47,15 +54,34 @@ cd algoritmo && pytest
 
 ## Reglas de trabajo
 
-- Por ahora solo front con datos mock hardcodeados (en `frontend/src/data/`).
-- Los datos que vendrán del backend se piden siempre a través de un servicio
-  en `frontend/src/services/` (`<recurso>Service.ts`, p. ej.
-  `clasesService.obtenerClases()`), nunca importando el mock directamente
-  desde un componente. Mientras el endpoint no exista, el servicio devuelve el
-  mock con `simularRespuesta` (`services/simulacion.ts`) y deja comentada la
-  llamada real con `obtenerJson` (`services/api.ts`, URL base en
-  `VITE_API_URL`, ver `frontend/.env.example`).
-- El backend y el algoritmo se desarrollan por separado.
+- El front habla con el backend real. Los datos del backend se piden siempre
+  a través de un servicio en `frontend/src/services/` (`<recurso>Service.ts`,
+  p. ej. `clasesService.obtenerClases()`), que usa `obtenerJson`, `enviarJson`
+  o `eliminar` de `services/api.ts` (URL base en `VITE_API_URL`, ver
+  `frontend/.env.example`). Nunca se llama a `fetch` desde un componente. En
+  `frontend/src/data/` solo quedan datos fijos de la vista (semana, niveles,
+  horario de ejemplo de la Landing).
+- Endpoints, cuerpo de las preferencias y datos semilla: ver `README.md`.
+- Base de datos: las tablas se crean con `Base.metadata.create_all` en el
+  `lifespan` y el catálogo (clases, profesores, edificios, salones, cursos) se
+  siembra solo si la base está vacía (`app/db/semilla.py`). Para cambiar el
+  esquema en desarrollo, `docker compose down -v` y volver a arrancar.
+- Usar tipos portables en los modelos (nada exclusivo de PostgreSQL): los
+  tests corren sobre SQLite.
+- Días y horas: en la API y el front los días llevan tilde (`miércoles`,
+  `sábado`); en la base y en `algoritmo` no. Las horas se guardan en minutos
+  y en la API van como `"HH:MM"`. Toda conversión pasa por `app/core/dias.py`.
+- El algoritmo se usa como librería desde `services/horarios_service.py`, con
+  una sola instancia por id de cada entidad y semilla fija. Ojo:
+  `asignar_horarios` falla (`KeyError`) si un compañero o restringido no está
+  en la lista de estudiantes que recibe; el servicio los filtra antes.
+- El backend y el algoritmo se desarrollan por separado: `algoritmo/` no
+  importa nada del backend.
+- Las preferencias de cada estudiante viven en `PanelPreferencias` (las
+  secciones reciben su valor y su setter) y suben por
+  `CartaEstudiante` → `Preferencias.tsx`, que las envía al pulsar "Finalizar"
+  (`preferenciasService`, que traduce las etiquetas del ranking a los tipos
+  del backend, y `horariosService`).
 - Usar Tailwind CSS para estilos.
 - En el frontend, mantener la configuración por defecto de la plantilla de Vite (oxlint, versiones de TypeScript, tsconfig); no reemplazarla por otras herramientas.
 - Seguir los TADs de `docs/` para nombrar tipos y entidades.

@@ -67,3 +67,18 @@ export interface FranjaHabilitada {
   desde: number
   hasta: number
 }
+
+// TAD Preferencias De Estudiante, tal como lo arma el panel: solo lo que
+// cuenta (secciones activas, profesores y compañeros de clases elegidas,
+// interruptores encendidos). `prioridades` usa las etiquetas de la vista;
+// `preferenciasService` las traduce a los tipos del backend.
+export interface PreferenciasEstudiante {
+  clases: PreferenciaClase[]
+  profesores: PreferenciaProfe[]
+  companeros: PreferenciaCompanero[]
+  restringidos: Companero[]
+  franjasHabilitadas: FranjaHabilitada[]
+  preferenciaCercania: boolean
+  preferenciaSinHuecos: boolean
+  prioridades: PrioridadPreferencias[]
+}

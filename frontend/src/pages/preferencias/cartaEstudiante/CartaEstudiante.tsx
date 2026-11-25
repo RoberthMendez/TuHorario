@@ -1,6 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import type { CSSProperties } from 'react'
 import type { Estudiante } from '../../../types/Estudiante'
+import type { PreferenciasEstudiante } from '../../../types/Preferencias'
 import PanelPreferencias from '../panelPreferencias/PanelPreferencias'
 import CabeceraCarta from './CabeceraCarta'
 import ConfirmarEliminar from './ConfirmarEliminar'
@@ -15,6 +22,11 @@ interface CartaEstudianteProps {
   /** Mientras se elimina (servicio y animación de salida). */
   eliminando: boolean
   onEliminar: () => void
+  /** Recibe las preferencias del estudiante cada vez que cambian. */
+  onCambiarPreferencias: (
+    idEstudiante: number,
+    preferencias: PreferenciasEstudiante,
+  ) => void
 }
 
 // Carta de un estudiante: colapsada por defecto; la flecha la despliega, el
@@ -26,7 +38,14 @@ export default function CartaEstudiante({
   abrirAlMontar = false,
   eliminando,
   onEliminar,
+  onCambiarPreferencias,
 }: CartaEstudianteProps) {
+  const idEstudiante = estudiante.id
+  const cambiarPreferencias = useCallback(
+    (preferencias: PreferenciasEstudiante) =>
+      onCambiarPreferencias(idEstudiante, preferencias),
+    [idEstudiante, onCambiarPreferencias],
+  )
   const [abierta, setAbierta] = useState(false)
   const [verDatos, setVerDatos] = useState(true)
   const [confirmando, setConfirmando] = useState(false)
@@ -109,7 +128,11 @@ export default function CartaEstudiante({
         <div className={abierta ? 'animate-entrar' : ''}>
           <DatosEstudiante estudiante={estudiante} visible={verDatos} />
         </div>
-        <PanelPreferencias animar={abierta} />
+        <PanelPreferencias
+          animar={abierta}
+          idEstudiante={idEstudiante}
+          onCambiarPreferencias={cambiarPreferencias}
+        />
       </Desplegable>
     </article>
   )

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense } from 'react'
 import iconoSeccion from '../../../../assets/cercania/icono-seccion.svg'
 import Interruptor from '../Interruptor'
 import SeccionPreferencia from '../SeccionPreferencia'
@@ -16,13 +16,18 @@ const cambio = 'animate-aparecer motion-reduce:animate-none'
 // seguidas queden en edificios cercanos. Apagada, Alejandro va corriendo y
 // el cronómetro avanza; encendida, se relaja, camina y el cronómetro se para.
 interface SeccionCercaniaProps {
+  /** Interruptor encendido (el estado vive en el panel). */
+  activa: boolean
+  onCambiar: (activa: boolean) => void
   /** Quita esta preferencia del estudiante. */
   onQuitar: () => void
 }
 
-export default function SeccionCercania({ onQuitar }: SeccionCercaniaProps) {
-  const [activa, setActiva] = useState(false)
-
+export default function SeccionCercania({
+  activa,
+  onCambiar: setActiva,
+  onQuitar,
+}: SeccionCercaniaProps) {
   return (
     <SeccionPreferencia
       icono={iconoSeccion}

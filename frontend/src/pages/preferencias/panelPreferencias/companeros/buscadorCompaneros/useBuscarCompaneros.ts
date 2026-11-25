@@ -14,7 +14,7 @@ type Respuesta =
  * llega la nueva, conserva las sugerencias anteriores para que la lista no
  * parpadee.
  */
-export function useBuscarCompaneros(consulta: string) {
+export function useBuscarCompaneros(consulta: string, excluir?: number) {
   const buscada = consulta.trim()
   const [respuesta, setRespuesta] = useState<Respuesta | null>(null)
   const [intento, setIntento] = useState(0)
@@ -23,7 +23,7 @@ export function useBuscarCompaneros(consulta: string) {
     if (!buscada) return
     const controlador = new AbortController()
     const temporizador = setTimeout(() => {
-      buscarCompaneros(buscada, controlador.signal)
+      buscarCompaneros(buscada, excluir, controlador.signal)
         .then((datos) => setRespuesta({ consulta: buscada, datos }))
         .catch((error: unknown) => {
           if (error instanceof DOMException && error.name === 'AbortError') {
@@ -36,7 +36,7 @@ export function useBuscarCompaneros(consulta: string) {
       clearTimeout(temporizador)
       controlador.abort()
     }
-  }, [buscada, intento])
+  }, [buscada, excluir, intento])
 
   const alDia = respuesta?.consulta === buscada
   return {

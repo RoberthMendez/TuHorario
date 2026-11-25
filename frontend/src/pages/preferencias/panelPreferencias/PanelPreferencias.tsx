@@ -1,8 +1,15 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import type { PreferenciaClase } from '../../../types/Preferencias'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type {
+  Companero,
+  PreferenciaClase,
+  PreferenciaCompanero,
+  PreferenciaProfe,
+  PreferenciasEstudiante,
+} from '../../../types/Preferencias'
 import SeccionCercania from './cercania/SeccionCercania'
 import SeccionClases from './clases/SeccionClases'
 import SeccionCompaneros from './companeros/SeccionCompaneros'
+import { bloques } from './franjas/horas'
 import SeccionFranjas from './franjas/SeccionFranjas'
 import NuevaPreferencia from './nuevaPreferencia/NuevaPreferencia'
 import {
@@ -14,6 +21,7 @@ import {
 import SeccionPrioridad from './prioridad/SeccionPrioridad'
 import SeccionProfesores from './profesores/SeccionProfesores'
 import TituloPanel from './TituloPanel'
+import { companerosVigentes, profesoresVisibles } from './vigentes'
 
 // Lo que dura el cierre de una sección al quitarla.
 const SALIDA_MS = 300
@@ -27,6 +35,10 @@ const tipoDe = (id: IdPreferencia) =>
 interface PanelPreferenciasProps {
   /** Al desplegarse la carta, las secciones entran una tras otra. */
   animar: boolean
+  /** Estudiante dueño del panel (el buscador de compañeros lo excluye). */
+  idEstudiante: number
+  /** Recibe las preferencias que cuentan cada vez que cambian. */
+  onCambiarPreferencias: (preferencias: PreferenciasEstudiante) => void
 }
 
 /*
@@ -42,8 +54,17 @@ interface PanelPreferenciasProps {
  * preferencia" añade las demás y con la X de cada una las quita. Cuando
  * hay al menos dos, aparece Prioridad de preferencias con solo las elegidas:
  * las nuevas entran de últimas.
+ *
+ * Los datos de todas las secciones viven aquí, para armar las preferencias
+ * del estudiante y avisarlas hacia arriba (`onCambiarPreferencias`). Solo
+ * cuentan las secciones activas (no las que se están quitando), los
+ * profesores y compañeros de clases elegidas y los interruptores encendidos.
  */
-export default function PanelPreferencias({ animar }: PanelPreferenciasProps) {
+export default function PanelPreferencias({
+  animar,
+  idEstudiante,
+  onCambiarPreferencias,
+}: PanelPreferenciasProps) {
   // Las clases elegidas viven aquí: las demás preferencias (profesores…) se
   // basan en ellas.
   const [clases, setClases] = useState<PreferenciaClase[]>([])
@@ -51,6 +72,11 @@ export default function PanelPreferencias({ animar }: PanelPreferenciasProps) {
   const [saliendo, setSaliendo] = useState<IdPreferencia[]>([])
   const [sinHuecos, setSinHuecos] = useState(false)
   const [orden, setOrden] = useState<string[]>([TIPO_CLASES])
+  const [profesores, setProfesores] = useState<PreferenciaProfe[]>([])
+  const [companeros, setCompaneros] = useState<PreferenciaCompanero[]>([])
+  const [restringidos, setRestringidos] = useState<Companero[]>([])
+  const [horas, setHoras] = useState<Set<string>>(new Set())
+  const [cercania, setCercania] = useState(false)
   // Pasada la entrada escalonada de la carta, lo que aparezca después (una
   // preferencia recién añadida) entra sin esperar.
   const [entradaLista, setEntradaLista] = useState(false)
@@ -94,6 +120,15 @@ export default function PanelPreferencias({ animar }: PanelPreferenciasProps) {
     const eliminar = () => {
       setActivas((a) => a.filter((x) => x !== id))
       setSaliendo((s) => s.filter((x) => x !== id))
+      // Al volver a añadirla empieza vacía (como cuando cada sección tenía
+      // su propio estado).
+      if (id === 'profesores') setProfesores([])
+      if (id === 'companeros') {
+        setCompaneros([])
+        setRestringidos([])
+      }
+      if (id === 'franjas') setHoras(new Set())
+      if (id === 'cercania') setCercania(false)
     }
     if (reducirMovimiento()) return eliminar()
     setSaliendo((s) => [...s, id])
@@ -111,23 +146,86 @@ export default function PanelPreferencias({ animar }: PanelPreferenciasProps) {
     )
   }
 
+  // Preferencias que cuentan, para quien las guarde (Preferencias.tsx).
+  const preferencias = useMemo<PreferenciasEstudiante>(() => {
+    const cuenta = (id: IdPreferencia) =>
+      activas.includes(id) && !saliendo.includes(id)
+    return {
+      clases,
+      profesores: cuenta('profesores')
+        ? profesoresVisibles(profesores, clases)
+        : [],
+      companeros: cuenta('companeros')
+        ? companerosVigentes(companeros, clases)
+        : [],
+      restringidos: cuenta('companeros') ? restringidos : [],
+      franjasHabilitadas: cuenta('franjas') ? bloques(horas) : [],
+      preferenciaSinHuecos: cuenta('franjas') && sinHuecos,
+      preferenciaCercania: cuenta('cercania') && cercania,
+      prioridades: orden.map((tipoPreferencia, i) => ({
+        tipoPreferencia,
+        prioridad: i + 1,
+      })),
+    }
+  }, [
+    activas,
+    saliendo,
+    clases,
+    profesores,
+    companeros,
+    restringidos,
+    horas,
+    sinHuecos,
+    cercania,
+    orden,
+  ])
+
+  useEffect(() => {
+    onCambiarPreferencias(preferencias)
+  }, [preferencias, onCambiarPreferencias])
+
   const seccionDe = (id: IdPreferencia): ReactNode => {
     const alQuitar = () => quitar(id)
     switch (id) {
       case 'profesores':
-        return <SeccionProfesores clases={clases} onQuitar={alQuitar} />
+        return (
+          <SeccionProfesores
+            clases={clases}
+            profesores={profesores}
+            onCambiarProfesores={setProfesores}
+            onQuitar={alQuitar}
+          />
+        )
       case 'companeros':
-        return <SeccionCompaneros clases={clases} onQuitar={alQuitar} />
+        return (
+          <SeccionCompaneros
+            clases={clases}
+            idEstudiante={idEstudiante}
+            preferencias={companeros}
+            onCambiarPreferencias={setCompaneros}
+            restringidos={restringidos}
+            onCambiarRestringidos={setRestringidos}
+            onQuitar={alQuitar}
+          />
+        )
       case 'franjas':
         return (
           <SeccionFranjas
+            horas={horas}
+            onCambiarHoras={setHoras}
             sinHuecos={sinHuecos}
             onCambiarSinHuecos={cambiarSinHuecos}
             onQuitar={alQuitar}
           />
         )
       case 'cercania':
-        return <SeccionCercania onQuitar={alQuitar} />
+        return (
+          <SeccionCercania
+            activa={cercania}
+            onCambiar={setCercania}
+            onQuitar={alQuitar}
+          />
+        )
     }
   }
 

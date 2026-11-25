@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type Dispatch, type SetStateAction } from 'react'
 import iconoSeccion from '../../../../assets/profesores/icono-seccion.svg'
 import type {
   NivelPreferencia,
@@ -7,6 +7,7 @@ import type {
   Profesor,
 } from '../../../../types/Preferencias'
 import SeccionPreferencia from '../SeccionPreferencia'
+import { profesoresVisibles } from '../vigentes'
 import ModalAnadirProfesores from './modalProfesores/ModalAnadirProfesores'
 import NivelesProfesor from './NivelesProfesor'
 import TusProfesores from './TusProfesores'
@@ -17,6 +18,9 @@ const NIVEL_INICIAL: NivelPreferencia = 2
 interface SeccionProfesoresProps {
   /** Clases del estudiante: definen qué profesores se pueden elegir. */
   clases: PreferenciaClase[]
+  /** Profesores calificados (el estado vive en el panel). */
+  profesores: PreferenciaProfe[]
+  onCambiarProfesores: Dispatch<SetStateAction<PreferenciaProfe[]>>
   /** Quita esta preferencia del estudiante. */
   onQuitar: () => void
 }
@@ -28,15 +32,13 @@ interface SeccionProfesoresProps {
  */
 export default function SeccionProfesores({
   clases,
+  profesores,
+  onCambiarProfesores: setProfesores,
   onQuitar,
 }: SeccionProfesoresProps) {
-  const [profesores, setProfesores] = useState<PreferenciaProfe[]>([])
   const [modalAbierto, setModalAbierto] = useState(false)
 
-  const idsClases = new Set(clases.map((p) => p.clase.id))
-  const visibles = profesores.filter((p) =>
-    p.profesor.idsClases.some((id) => idsClases.has(id)),
-  )
+  const visibles = profesoresVisibles(profesores, clases)
 
   const anadir = (nuevos: Profesor[]) => {
     setProfesores((actuales) => [

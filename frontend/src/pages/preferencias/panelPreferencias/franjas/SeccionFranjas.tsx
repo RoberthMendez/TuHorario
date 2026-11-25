@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import iconoSeccion from '../../../../assets/franjas/icono-seccion.svg'
 import SeccionPreferencia from '../SeccionPreferencia'
 import BotonesRapidos from './BotonesRapidos'
@@ -7,6 +7,9 @@ import HorarioSinHuecos from './HorarioSinHuecos'
 import { agregar, quitar } from './horas'
 
 interface SeccionFranjasProps {
+  /** Horas marcadas ("lunes|14"); el estado vive en el panel. */
+  horas: Set<string>
+  onCambiarHoras: Dispatch<SetStateAction<Set<string>>>
   /** "Horario sin huecos" vive en el panel: se prioriza por aparte. */
   sinHuecos: boolean
   onCambiarSinHuecos: (activo: boolean) => void
@@ -15,13 +18,13 @@ interface SeccionFranjasProps {
 }
 
 export default function SeccionFranjas({
+  horas,
+  onCambiarHoras: setHoras,
   sinHuecos,
   onCambiarSinHuecos,
   onQuitar,
 }: SeccionFranjasProps) {
-  // Horas marcadas ("lunes|14"); la grilla las muestra como franjas.
-  const [horas, setHoras] = useState<Set<string>>(new Set())
-
+  // La grilla muestra las horas marcadas como franjas.
   return (
     <SeccionPreferencia
       icono={iconoSeccion}

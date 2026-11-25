@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react'
 import iconoSeccion from '../../../../assets/companeros/icono-seccion.svg'
 import type {
   Companero,
@@ -7,6 +13,7 @@ import type {
 } from '../../../../types/Preferencias'
 import { FONDO_COMPANERO } from '../colores'
 import SeccionPreferencia from '../SeccionPreferencia'
+import { companerosVigentes } from '../vigentes'
 import BuscadorCompaneros from './buscadorCompaneros/BuscadorCompaneros'
 import ClasesCompanero from './clasesCompanero/ClasesCompanero'
 import BotonRestringir from './restringidos/BotonRestringir'
@@ -23,6 +30,13 @@ const reducirMovimiento = () =>
 interface SeccionCompanerosProps {
   /** Clases del estudiante: con cada compañero se eligen entre estas. */
   clases: PreferenciaClase[]
+  /** Estudiante dueño de la carta (no se sugiere a sí mismo). */
+  idEstudiante: number
+  /** Compañeros por clase y restringidos (el estado vive en el panel). */
+  preferencias: PreferenciaCompanero[]
+  onCambiarPreferencias: Dispatch<SetStateAction<PreferenciaCompanero[]>>
+  restringidos: Companero[]
+  onCambiarRestringidos: Dispatch<SetStateAction<Companero[]>>
   /** Quita esta preferencia del estudiante. */
   onQuitar: () => void
 }
@@ -35,10 +49,13 @@ interface SeccionCompanerosProps {
  */
 export default function SeccionCompaneros({
   clases,
+  idEstudiante,
+  preferencias,
+  onCambiarPreferencias: setPreferencias,
+  restringidos,
+  onCambiarRestringidos: setRestringidos,
   onQuitar,
 }: SeccionCompanerosProps) {
-  const [preferencias, setPreferencias] = useState<PreferenciaCompanero[]>([])
-  const [restringidos, setRestringidos] = useState<Companero[]>([])
   const [enEspera, setEnEspera] = useState<Companero | null>(null)
   const [seleccion, setSeleccion] = useState<Set<number>>(new Set())
   // Restricción en curso: el muñeco va camino a la caneca.
@@ -58,7 +75,7 @@ export default function SeccionCompaneros({
   // Solo cuentan las preferencias de clases que siguen elegidas (si se
   // quita una clase y se vuelve a agregar, sus compañeros regresan).
   const idsClases = new Set(clases.map((p) => p.clase.id))
-  const vigentes = preferencias.filter((p) => idsClases.has(p.clase.id))
+  const vigentes = companerosVigentes(preferencias, clases)
   const companerosDeClase = (idClase: number) =>
     vigentes
       .filter((p) => p.clase.id === idClase)
@@ -181,6 +198,7 @@ export default function SeccionCompaneros({
     >
       <div ref={escena} className="relative">
         <BuscadorCompaneros
+          idEstudiante={idEstudiante}
           refAvatar={avatar}
           enEspera={enEspera}
           restringiendo={restringiendo}

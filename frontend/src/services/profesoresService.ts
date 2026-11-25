@@ -1,9 +1,8 @@
-import { profesoresDisponibles } from '../data/profesores'
 import type { Profesor } from '../types/Preferencias'
-import { simularRespuesta } from './simulacion'
+import { obtenerJson } from './api'
 
 /*
- * Servicio de profesores. Endpoint previsto en el backend:
+ * Servicio de profesores.
  *
  *   GET /profesores?clases=1,7,11
  *     →  200 [{ "id": 1, "nombre": "…", "genero": "femenino",
@@ -17,17 +16,7 @@ export function obtenerProfesoresDeClases(
   idsClases: number[],
   signal?: AbortSignal,
 ): Promise<Profesor[]> {
-  // TODO: cuando exista el endpoint, reemplazar por:
-  //   return obtenerJson<Profesor[]>(
-  //     `/profesores?clases=${idsClases.join(',')}`,
-  //     { signal },
-  //   )
-  // (importando `obtenerJson` de './api').
-  const ids = new Set(idsClases)
-  return simularRespuesta(
-    profesoresDisponibles.filter((profe) =>
-      profe.idsClases.some((id) => ids.has(id)),
-    ),
+  return obtenerJson<Profesor[]>(`/profesores?clases=${idsClases.join(',')}`, {
     signal,
-  )
+  })
 }
