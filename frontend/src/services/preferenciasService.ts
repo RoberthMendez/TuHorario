@@ -1,4 +1,7 @@
-import type { PreferenciasEstudiante } from '../types/Preferencias'
+import type {
+  PreferenciasEstudiante,
+  TipoPreferencia,
+} from '../types/Preferencias'
 import { enviarJson } from './api'
 
 /*
@@ -16,9 +19,6 @@ import { enviarJson } from './api'
  *
  * Reemplaza todas las preferencias del estudiante.
  */
-
-type TipoPreferencia =
-  'clases' | 'profesores' | 'estudiantes' | 'horarios' | 'huecos' | 'cercania'
 
 // Etiquetas del ranking en la vista (ver preferenciasOpcionales.ts) → tipos
 // del backend (TAD Prioridad Preferencias).

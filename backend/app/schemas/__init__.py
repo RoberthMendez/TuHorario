@@ -157,8 +157,17 @@ class ClaseNoAsignadaOut(Esquema):
     prioridad: bool
 
 
+class PreferenciaNoCumplidaOut(Esquema):
+    """Una preferencia que el horario no cumple, con un texto para mostrarle al estudiante."""
+
+    tipo: TipoPreferencia
+    detalle: str
+    id_clase: int | None = None  # clase a la que se refiere (None en cercanía y huecos)
+
+
 class HorarioEstudianteOut(Esquema):
     id_estudiante: int
     nombre: str
     cursos: list[CursoAsignadoOut]
     clases_no_asignadas: list[ClaseNoAsignadaOut]
+    preferencias_no_cumplidas: list[PreferenciaNoCumplidaOut]

@@ -37,6 +37,10 @@ export interface Profesor {
   idsClases: number[]
 }
 
+// Categorías de preferencia en el backend (TAD Prioridad Preferencias).
+export type TipoPreferencia =
+  'clases' | 'profesores' | 'estudiantes' | 'horarios' | 'huecos' | 'cercania'
+
 // TAD Preferencia de Profesor: 0 = no quiere verlo, 3 = prioridad máxima.
 export type NivelPreferencia = 0 | 1 | 2 | 3
 

@@ -1,5 +1,5 @@
 import type { Dia } from './Horario'
-import type { Clase } from './Preferencias'
+import type { Clase, TipoPreferencia } from './Preferencias'
 
 // Respuesta de `POST /horarios/generar` y `GET /horarios`: el horario que el
 // algoritmo le asignó a cada estudiante (TAD Curso con sus SalonHorario).
@@ -30,9 +30,17 @@ export interface ClaseNoAsignada {
   prioridad: boolean
 }
 
+// Una preferencia que el horario no cumple, con el texto para mostrarla.
+export interface PreferenciaNoCumplida {
+  tipo: TipoPreferencia
+  detalle: string
+  idClase: number | null // null en cercanía y huecos
+}
+
 export interface HorarioEstudiante {
   idEstudiante: number
   nombre: string
   cursos: CursoAsignado[]
   clasesNoAsignadas: ClaseNoAsignada[]
+  preferenciasNoCumplidas: PreferenciaNoCumplida[]
 }

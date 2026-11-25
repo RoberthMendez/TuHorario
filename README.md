@@ -138,7 +138,21 @@ huecos`. Las reglas de negocio que no se cumplen responden 400 con un
 Respuesta de horarios, por estudiante:
 `{idEstudiante, nombre, cursos: [{id, codigo, clase, profesor, sesiones:
 [{dia, horaInicio, horaFin, salon: {codigo, edificio}}]}], clasesNoAsignadas:
-[{clase, prioridad}]}`.
+[{clase, prioridad}], preferenciasNoCumplidas: [{tipo, detalle, idClase}]}`.
+
+`preferenciasNoCumplidas` lista todas las preferencias que el horario no
+cumple (`app/services/cumplimiento_service.py`), con un `detalle` listo para
+mostrar e `idClase` cuando se refiere a una clase (`null` en cercanía y
+huecos). Se calcula desde la base, así que `GET /horarios` también la trae:
+
+| `tipo` | Se reporta cuando… |
+|---|---|
+| `clases` | una clase pedida no quedó inscrita |
+| `horarios` | una sesión cae (toda o en parte) fuera de las franjas habilitadas; sin franjas no se reporta |
+| `profesores` | le tocó un profesor vetado (0) o uno con menor calificación que el mejor calificado (1–3) de los que dictan esa clase |
+| `estudiantes` | no quedó en el mismo curso que un compañero pedido, o quedó en el mismo curso que alguien restringido |
+| `cercania` | con cercanía activada: dos clases seguidas (sin hora libre) en edificios distintos |
+| `huecos` | con "sin huecos" activado: horas libres entre la primera y la última clase de un día (una entrada por día) |
 
 Al generar, el cupo disponible de cada curso es `cupo − inscritos que no
 están en esta corrida`, y las inscripciones anteriores de los estudiantes de
