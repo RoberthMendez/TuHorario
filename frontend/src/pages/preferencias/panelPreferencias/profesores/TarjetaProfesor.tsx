@@ -6,7 +6,7 @@ import type {
 } from '../../../../types/Preferencias'
 import BotonQuitar from '../BotonQuitar'
 import { FONDO_PASTEL } from '../../../../styles/colores'
-import AvatarProfesor from './avatarProfesor/AvatarProfesor'
+import AvatarProfesor from '../../../../components/avatarProfesor/AvatarProfesor'
 import ContadorNivel from './ContadorNivel'
 
 interface TarjetaProfesorProps {

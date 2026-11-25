@@ -3,9 +3,9 @@ import BotonEliminar from './BotonEliminar'
 import BotonDesplegar from '../../../components/BotonDesplegar'
 import BotonOjo from './BotonOjo'
 import InsigniaNumero from '../../../components/InsigniaNumero'
+import NombreEstudiante from './nombreEstudiante/NombreEstudiante'
 
 interface CabeceraCartaProps {
-  ref?: Ref<HTMLDivElement>
   numero: number
   nombre: string
   abierta: boolean
@@ -13,6 +13,7 @@ interface CabeceraCartaProps {
   idContenido: string
   onAlternar: () => void
   onAlternarDatos: () => void
+  onRenombrar: (nombre: string) => Promise<void>
   refEliminar?: Ref<HTMLButtonElement>
   /** Se está pidiendo confirmación para eliminar. */
   confirmando: boolean
@@ -21,7 +22,6 @@ interface CabeceraCartaProps {
 }
 
 export default function CabeceraCarta({
-  ref,
   numero,
   nombre,
   abierta,
@@ -29,19 +29,21 @@ export default function CabeceraCarta({
   idContenido,
   onAlternar,
   onAlternarDatos,
+  onRenombrar,
   refEliminar,
   confirmando,
   idConfirmacion,
   onPedirEliminar,
 }: CabeceraCartaProps) {
   return (
-    <div ref={ref} className="flex min-h-19 items-center gap-3.75 px-5 py-3">
+    <div className="flex min-h-19 items-center gap-3.75 px-5 py-3">
       <InsigniaNumero numero={numero} />
-      <h2 className="font-jakarta text-22 font-extrabold text-bunting">
-        {nombre}
-      </h2>
-      {/* El ojo solo aparece con la carta desplegada */}
-      {abierta && <BotonOjo visible={verDatos} onClick={onAlternarDatos} />}
+      {/* Lápiz (editar el nombre) y ojo juntos, pegados al nombre. */}
+      <div className="flex min-w-0 items-center gap-1">
+        <NombreEstudiante nombre={nombre} onRenombrar={onRenombrar} />
+        {/* El ojo solo aparece con la carta desplegada */}
+        {abierta && <BotonOjo visible={verDatos} onClick={onAlternarDatos} />}
+      </div>
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <BotonEliminar
           ref={refEliminar}

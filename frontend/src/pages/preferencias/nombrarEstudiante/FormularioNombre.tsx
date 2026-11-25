@@ -27,6 +27,8 @@ interface FormularioNombreProps {
   /** Pregunta sobre el campo. */
   etiqueta: string
   creando: boolean
+  /** Por qué no se pudo crear el estudiante (lo manda el servidor). */
+  error?: string | null
   onConfirmar: (nombre: string) => void
   /** Cada letra que se escribe (p. ej. para mostrarla en una ilustración). */
   onCambiarNombre?: (nombre: string) => void
@@ -59,6 +61,7 @@ export default function FormularioNombre({
   ref,
   etiqueta,
   creando,
+  error = null,
   onConfirmar,
   onCambiarNombre,
   autoEnfocar = false,
@@ -144,7 +147,7 @@ export default function FormularioNombre({
               spellCheck={false}
               maxLength={60}
               disabled={creando}
-              aria-invalid={aviso !== null}
+              aria-invalid={aviso !== null || error !== null}
               aria-describedby={idAyuda}
               className={`mt-0.5 w-full border-b-2 bg-transparent pb-0.5 font-jakarta text-22 font-extrabold text-bunting transition-colors outline-none placeholder:text-casper ${
                 aviso
@@ -159,11 +162,13 @@ export default function FormularioNombre({
       <p
         id={idAyuda}
         aria-live="polite"
-        className={`mt-3 font-dm-sans text-14 ${aviso ? 'font-bold text-alizarin' : 'text-east-bay'}`}
+        className={`mt-3 font-dm-sans text-14 ${aviso || error ? 'font-bold text-alizarin' : 'text-east-bay'}`}
       >
         {aviso
           ? MENSAJES[aviso]
-          : 'Escribe su nombre y su apellido: con eso generamos su correo, cédula, teléfono y código estudiantil.'}
+          : error
+            ? `No pudimos crear al estudiante: ${error}`
+            : 'Escribe su nombre y su apellido: con eso generamos su correo, cédula, teléfono y código estudiantil.'}
       </p>
     </form>
   )

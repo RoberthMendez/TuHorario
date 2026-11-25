@@ -1,5 +1,5 @@
 import type { Companero } from '../../../../../types/Preferencias'
-import AvatarCompanero from '../AvatarCompanero'
+import AvatarCompanero from '../../../../../components/avatarCompanero/AvatarCompanero'
 import TodosLosCompaneros from './TodosLosCompaneros'
 
 // Iniciales que caben en la ficha; el resto va en el "+n".

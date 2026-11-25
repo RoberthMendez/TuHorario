@@ -23,7 +23,7 @@ documento de la primera entrega, con los TADs, está en `docs/`.
   - `services/`: la lógica de negocio.
   - `repositories/`: todas las consultas con SQLAlchemy 2.x; los servicios no escriben SQL.
   - `models/` (ORM) y `schemas/` (Pydantic, camelCase con `alias_generator=to_camel`).
-  - `db/`: engine, `SessionLocal`, `Base`, `get_db` y `semilla.py`.
+  - `db/`: engine, `SessionLocal`, `Base`, `get_db`, `semilla.py` y `ejemplo.py`.
   - `core/`: `config.py`, `errores.py` (`NoEncontrado` → 404, `ReglaNegocio` → 400, `Conflicto` → 409) y `dias.py`.
   - `main.py`.
 - `backend/tests/` — tests con pytest sobre SQLite en memoria (`conftest.py` sobreescribe `get_db`).
@@ -62,6 +62,11 @@ cd algoritmo && pytest
   `frontend/src/data/` solo quedan datos fijos de la vista (semana, niveles,
   horario de ejemplo de la Landing).
 - Endpoints, cuerpo de las preferencias y datos semilla: ver `README.md`.
+- Ejemplo de la sustentación ("Cargar ejemplo" en Preferencias vacía,
+  `POST /ejemplo`): 10 estudiantes fijos en `app/db/ejemplo.py`, con ids del
+  catálogo semilla. `tests/test_ejemplo.py` exige que su resultado muestre
+  todos los casos; si cambian la semilla o el algoritmo, correrlo y ajustar
+  el ejemplo.
 - Base de datos: las tablas se crean con `Base.metadata.create_all` en el
   `lifespan` y el catálogo (clases, profesores, edificios, salones, cursos) se
   siembra solo si la base está vacía (`app/db/semilla.py`). Para cambiar el
@@ -79,9 +84,19 @@ cd algoritmo && pytest
   importa nada del backend.
 - Las preferencias de cada estudiante viven en `PanelPreferencias` (las
   secciones reciben su valor y su setter) y suben por
-  `CartaEstudiante` → `Preferencias.tsx`, que las envía al pulsar "Finalizar"
-  (`preferenciasService`, que traduce las etiquetas del ranking a los tipos
-  del backend, y `horariosService`).
+  `CartaEstudiante` → `Preferencias.tsx`, que las guarda al pulsar
+  "Finalizar" (`preferenciasService`, que traduce las etiquetas del ranking
+  a los tipos del backend y al revés) y abre Horarios.
+- Flujo entre páginas (`src/rutas.ts`): el intento son los ids de sus
+  estudiantes y viaja en la URL (`?estudiantes=1,2,3`); Preferencias la
+  mantiene al día. "Finalizar" navega a `/horarios?…` con el estado
+  `{ generar: true }`: Horarios corre el algoritmo una sola vez
+  (`useHorarios`, ojo con el doble efecto de StrictMode) y luego borra ese
+  estado, así que una recarga lee con `GET /horarios`. Si Preferencias se
+  abre con `?estudiantes=` ("Repetir intento", "atrás", recarga) recupera
+  estudiantes y preferencias guardadas (`recuperarIntento.ts`) y cada panel
+  arranca con ellas (`iniciales`). "Desde cero" borra a los estudiantes del
+  intento.
 - Usar Tailwind CSS para estilos.
 - En el frontend, mantener la configuración por defecto de la plantilla de Vite (oxlint, versiones de TypeScript, tsconfig); no reemplazarla por otras herramientas.
 - Seguir los TADs de `docs/` para nombrar tipos y entidades.

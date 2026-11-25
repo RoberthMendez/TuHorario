@@ -1,6 +1,6 @@
 import type { Companero } from '../../../../../types/Preferencias'
 import TextoResaltado from '../../modalSeleccion/TextoResaltado'
-import AvatarCompanero from '../AvatarCompanero'
+import AvatarCompanero from '../../../../../components/avatarCompanero/AvatarCompanero'
 
 interface ResultadoCompaneroProps {
   id: string

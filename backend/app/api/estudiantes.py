@@ -25,6 +25,16 @@ def crear_estudiante(datos: EstudianteCrear, db: Annotated[Session, Depends(get_
     return estudiantes_service.crear(db, datos.nombre)
 
 
+@router.get("/{id_estudiante}", response_model=EstudianteOut)
+def obtener_estudiante(id_estudiante: int, db: Annotated[Session, Depends(get_db)]):
+    return estudiantes_service.obtener(db, id_estudiante)
+
+
+@router.put("/{id_estudiante}", response_model=EstudianteOut)
+def renombrar_estudiante(id_estudiante: int, datos: EstudianteCrear, db: Annotated[Session, Depends(get_db)]):
+    return estudiantes_service.renombrar(db, id_estudiante, datos.nombre)
+
+
 @router.delete("/{id_estudiante}", status_code=status.HTTP_204_NO_CONTENT)
 def eliminar_estudiante(id_estudiante: int, db: Annotated[Session, Depends(get_db)]):
     estudiantes_service.eliminar(db, id_estudiante)

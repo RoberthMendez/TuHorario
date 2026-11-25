@@ -35,8 +35,11 @@ export default function SeccionClases({
   onCambiarClases: setClases,
 }: SeccionClasesProps) {
   // Ids que ya se muestran adelante (va un poco detrás de `prioridad` para
-  // dejar ver el estampado antes de mover la ficha).
-  const [adelante, setAdelante] = useState<Set<number>>(new Set())
+  // dejar ver el estampado antes de mover la ficha). Las que ya llegan con
+  // prioridad (al repetir un intento) empiezan adelante.
+  const [adelante, setAdelante] = useState<Set<number>>(
+    () => new Set(clases.filter((p) => p.prioridad).map((p) => p.clase.id)),
+  )
   const [modalAbierto, setModalAbierto] = useState(false)
   const temporizadores = useRef(new Map<number, number>())
   const registrar = useDeslizarAlReordenar()

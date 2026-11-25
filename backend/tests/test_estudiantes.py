@@ -26,6 +26,30 @@ def test_crear_genera_los_datos(client) -> None:
     assert crear(client, "Ana María Núñez Gómez")["correo"] == "anunez03@javeriana.edu.co"
 
 
+def test_obtener_por_id(client) -> None:
+    ana = crear(client, "Ana Ruiz")
+    assert client.get(f"/estudiantes/{ana['id']}").json() == ana
+    assert client.get("/estudiantes/999").status_code == 404
+
+
+def test_renombrar_rehace_el_correo(client) -> None:
+    ana = crear(client, "Ana Ruiz")
+    crear(client, "Carlos Pérez")
+    respuesta = client.put(f"/estudiantes/{ana['id']}", json={"nombre": " Ana  Gómez "})
+    assert respuesta.status_code == 200, respuesta.text
+    renombrada = respuesta.json()
+    assert renombrada["nombre"] == "Ana Gómez"
+    assert renombrada["correo"] == "agomez01@javeriana.edu.co"
+    otros = {k: v for k, v in renombrada.items() if k not in ("nombre", "correo")}
+    assert otros == {k: v for k, v in ana.items() if k not in ("nombre", "correo")}
+
+    # Su propio correo no cuenta como repetido: el mismo nombre lo deja igual.
+    assert client.put(f"/estudiantes/{ana['id']}", json={"nombre": "Ana Gómez"}).json()["correo"] == renombrada["correo"]
+
+    assert client.put("/estudiantes/999", json={"nombre": "Ana Ruiz"}).status_code == 404
+    assert client.put(f"/estudiantes/{ana['id']}", json={"nombre": "  "}).status_code == 422
+
+
 def test_nombre_vacio_es_invalido(client) -> None:
     assert client.post("/estudiantes", json={"nombre": "   "}).status_code == 422
 

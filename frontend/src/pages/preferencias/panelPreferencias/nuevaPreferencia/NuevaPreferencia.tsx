@@ -9,6 +9,8 @@ import OpcionPreferencia from './OpcionPreferencia'
 interface NuevaPreferenciaProps {
   /** Preferencias que el estudiante aún no ha añadido. */
   disponibles: PreferenciaOpcional[]
+  /** Aún no hay clases: las preferencias que dependen de ellas se bloquean. */
+  sinClases: boolean
   onAnadir: (id: IdPreferencia) => void
 }
 
@@ -16,9 +18,11 @@ interface NuevaPreferenciaProps {
  * Botón "Nueva preferencia" con un desplegable de las preferencias que faltan
  * por añadir. Elegir una la añade y cierra el desplegable; también se cierra
  * con Escape o al hacer clic por fuera. Si ya están todas, no se muestra.
+ * Sin clases, las que dependen de ellas aparecen bloqueadas.
  */
 export default function NuevaPreferencia({
   disponibles,
+  sinClases,
   onAnadir,
 }: NuevaPreferenciaProps) {
   const [abierto, setAbierto] = useState(false)
@@ -74,6 +78,7 @@ export default function NuevaPreferencia({
               >
                 <OpcionPreferencia
                   opcion={opcion}
+                  bloqueada={sinClases && opcion.requiereClases}
                   onElegir={() => {
                     setAbierto(false)
                     onAnadir(opcion.id)

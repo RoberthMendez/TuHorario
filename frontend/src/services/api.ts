@@ -17,6 +17,18 @@ export class ErrorApi extends Error {
   }
 }
 
+/**
+ * Mensaje para mostrarle al usuario. Si `fetch` ni siquiera llegó al servidor
+ * (backend apagado, sin red, CORS) lanza un `TypeError`.
+ */
+export function mensajeDeError(error: unknown): string {
+  if (error instanceof ErrorApi) return error.message
+  if (error instanceof TypeError) {
+    return 'No hay conexión con el servidor. Revisa que el backend esté corriendo.'
+  }
+  return error instanceof Error ? error.message : 'Error desconocido'
+}
+
 interface OpcionesPeticion {
   /** Permite cancelar la petición (p. ej. si se cierra el modal). */
   signal?: AbortSignal

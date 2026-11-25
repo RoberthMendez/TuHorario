@@ -7,7 +7,6 @@ import type {
   Profesor,
 } from '../../../../types/Preferencias'
 import SeccionPreferencia from '../SeccionPreferencia'
-import { profesoresVisibles } from '../vigentes'
 import ModalAnadirProfesores from './modalProfesores/ModalAnadirProfesores'
 import NivelesProfesor from './NivelesProfesor'
 import TusProfesores from './TusProfesores'
@@ -27,8 +26,9 @@ interface SeccionProfesoresProps {
 
 /*
  * Profesores de las clases elegidas, cada uno con un nivel de 0 a 3. Se
- * añaden desde un modal (varios a la vez), igual que las clases. Si se quita
- * una clase, sus profesores se ocultan (y vuelven si se agrega de nuevo).
+ * añaden desde un modal (varios a la vez), igual que las clases, y solo
+ * salen los que dictan alguna de ellas. Si se quita una clase, el panel
+ * borra a los profesores que ya no dictan ninguna.
  */
 export default function SeccionProfesores({
   clases,
@@ -37,8 +37,6 @@ export default function SeccionProfesores({
   onQuitar,
 }: SeccionProfesoresProps) {
   const [modalAbierto, setModalAbierto] = useState(false)
-
-  const visibles = profesoresVisibles(profesores, clases)
 
   const anadir = (nuevos: Profesor[]) => {
     setProfesores((actuales) => [
@@ -71,7 +69,7 @@ export default function SeccionProfesores({
       <NivelesProfesor />
       <div className="mt-4.5">
         <TusProfesores
-          profesores={visibles}
+          profesores={profesores}
           clases={clases}
           onCambiarNivel={cambiarNivel}
           onQuitar={quitar}

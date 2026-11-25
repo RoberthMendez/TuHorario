@@ -12,13 +12,31 @@ los mismos criterios que el algoritmo:
 - **restringidos** (tipo ``estudiantes``): quedó en un curso con alguien que restringió.
 - **cercania**: dos clases seguidas (sin hora libre) en edificios distintos.
 - **huecos**: horas libres entre la primera y la última clase de un día.
+
+Cada caso sale con los datos para dibujarlo (``schemas``: ``caso`` dice cuál)
+y con ``detalle``, el mismo caso en una frase.
 """
 
 from dataclasses import dataclass
 
 from app import models
 from app.core.dias import DIAS, a_texto, dia_api
-from app.schemas import PreferenciaNoCumplidaOut
+from app.schemas import (
+    ClaseOut,
+    ClaseSinCupoOut,
+    ConRestringidoOut,
+    EstudianteResumenOut,
+    FueraDeFranjaOut,
+    HorasLibresOut,
+    OtroProfesorOut,
+    ParadaOut,
+    PreferenciaNoCumplidaOut,
+    ProfesorCalificadoOut,
+    ProfesorVetadoOut,
+    SinCompaneroOut,
+    SinDescansoOut,
+    TramoOut,
+)
 
 # Orden en que se listan (el mismo del ranking por defecto del front).
 _ORDEN_TIPOS = ("clases", "horarios", "profesores", "estudiantes", "cercania", "huecos")
@@ -48,11 +66,25 @@ def _cuando(s: _Sesion) -> str:
     return f"el {dia_api(DIAS[s.dia_orden])} de {a_texto(s.inicio)} a {a_texto(s.fin)}"
 
 
+def _clase(clase: models.Clase) -> ClaseOut:
+    return ClaseOut.model_validate(clase)
+
+
+def _calificado(profesor: models.Profesor, nota: int | None) -> ProfesorCalificadoOut:
+    return ProfesorCalificadoOut(id=profesor.id, nombre=profesor.nombre, genero=profesor.genero, nota=nota)
+
+
 def _clases(p: models.PreferenciasDeEstudiante, por_clase: dict[int, models.Curso]):
     for pc in p.preferencia_clases:
         if pc.clase_id not in por_clase:
             prioridad = " (era prioritaria)" if pc.prioridad else ""
-            yield "clases", f"No te asignaron {pc.clase.nombre}{prioridad}.", pc.clase_id
+            yield ClaseSinCupoOut(
+                tipo="clases",
+                detalle=f"No te asignaron {pc.clase.nombre}{prioridad}.",
+                id_clase=pc.clase_id,
+                clase=_clase(pc.clase),
+                prioridad=bool(pc.prioridad),
+            )
 
 
 def _franjas(p: models.PreferenciasDeEstudiante, sesiones: list[_Sesion]):
@@ -65,8 +97,18 @@ def _franjas(p: models.PreferenciasDeEstudiante, sesiones: list[_Sesion]):
         horas = range(s.inicio, s.fin, 60)
         fuera = sum((DIAS[s.dia_orden], h) not in habilitadas for h in horas)
         if fuera:
-            cuanto = "queda fuera" if fuera == len(horas) else "queda en parte fuera"
-            yield "horarios", f"{s.curso.clase.nombre} {_cuando(s)} {cuanto} de tus franjas.", s.curso.clase_id
+            parcial = fuera < len(horas)
+            cuanto = "queda en parte fuera" if parcial else "queda fuera"
+            yield FueraDeFranjaOut(
+                tipo="horarios",
+                detalle=f"{s.curso.clase.nombre} {_cuando(s)} {cuanto} de tus franjas.",
+                id_clase=s.curso.clase_id,
+                clase=_clase(s.curso.clase),
+                dia=dia_api(DIAS[s.dia_orden]),
+                hora_inicio=a_texto(s.inicio),
+                hora_fin=a_texto(s.fin),
+                parcial=parcial,
+            )
 
 
 def _nota(calificacion: int | None) -> str:
@@ -84,16 +126,27 @@ def _profesores(
         nota = tocado.preferencia if tocado else None
         nombre = c.profesor.nombre if c.profesor else "un curso sin profesor"
         if nota == 0:
-            yield "profesores", f"En {c.clase.nombre} te tocó {nombre}, a quien no querías ver.", c.clase_id
+            yield ProfesorVetadoOut(
+                tipo="profesores",
+                detalle=f"En {c.clase.nombre} te tocó {nombre}, a quien no querías ver.",
+                id_clase=c.clase_id,
+                clase=_clase(c.clase),
+                profesor=_calificado(c.profesor, 0),
+            )
             continue
         candidatos = [pp for pp in calif.values() if c.clase_id in clases_de_profesor.get(pp.profesor_id, ())]
         mejor = max(candidatos, key=lambda pp: pp.preferencia, default=None)
         if mejor and mejor.preferencia >= 1 and (nota or 0) < mejor.preferencia:
-            yield (
-                "profesores",
-                f"En {c.clase.nombre} te tocó {nombre} ({_nota(nota)}) y preferías a "
-                f"{mejor.profesor.nombre} ({_nota(mejor.preferencia)}).",
-                c.clase_id,
+            yield OtroProfesorOut(
+                tipo="profesores",
+                detalle=(
+                    f"En {c.clase.nombre} te tocó {nombre} ({_nota(nota)}) y preferías a "
+                    f"{mejor.profesor.nombre} ({_nota(mejor.preferencia)})."
+                ),
+                id_clase=c.clase_id,
+                clase=_clase(c.clase),
+                profesor=_calificado(c.profesor, nota) if c.profesor else None,
+                preferido=_calificado(mejor.profesor, mejor.preferencia),
             )
 
 
@@ -109,12 +162,21 @@ def _companeros(
         if mio and suyo and mio.id == suyo.id:
             continue
         if mio is None:
-            motivo = "no te asignaron la clase"
+            motivo, texto = "sinClase", "no te asignaron la clase"
         elif suyo is None:
-            motivo = f"{otro} no quedó inscrito en esa clase"
+            motivo, texto = "companeroSinClase", f"{otro} no quedó inscrito en esa clase"
         else:
-            motivo = f"tú quedaste en {mio.codigo} y {otro} en {suyo.codigo}"
-        yield "estudiantes", f"No quedaste con {otro} en {pe.clase.nombre}: {motivo}.", pe.clase_id
+            motivo, texto = "otroCurso", f"tú quedaste en {mio.codigo} y {otro} en {suyo.codigo}"
+        yield SinCompaneroOut(
+            tipo="estudiantes",
+            detalle=f"No quedaste con {otro} en {pe.clase.nombre}: {texto}.",
+            id_clase=pe.clase_id,
+            clase=_clase(pe.clase),
+            companero=EstudianteResumenOut(id=pe.estudiante_preferido_id, nombre=otro),
+            motivo=motivo,
+            curso=mio.codigo if mio else None,
+            curso_companero=suyo.codigo if suyo else None,
+        )
 
 
 def _restringidos(
@@ -126,7 +188,14 @@ def _restringidos(
         suyos = {c.id for c in cursos_de.get(r.id, [])}
         for c in cursos:
             if c.id in suyos:
-                yield "estudiantes", f"Quedaste con {r.nombre} en {c.clase.nombre} ({c.codigo}).", c.clase_id
+                yield ConRestringidoOut(
+                    tipo="estudiantes",
+                    detalle=f"Quedaste con {r.nombre} en {c.clase.nombre} ({c.codigo}).",
+                    id_clase=c.clase_id,
+                    clase=_clase(c.clase),
+                    restringido=EstudianteResumenOut(id=r.id, nombre=r.nombre),
+                    curso=c.codigo,
+                )
 
 
 def _cercania(p: models.PreferenciasDeEstudiante, sesiones: list[_Sesion]):
@@ -134,11 +203,16 @@ def _cercania(p: models.PreferenciasDeEstudiante, sesiones: list[_Sesion]):
         return
     for a, b in zip(sesiones, sesiones[1:]):
         if a.dia_orden == b.dia_orden and b.inicio == a.fin and a.edificio.id != b.edificio.id:
-            yield (
-                "cercania",
-                f"El {dia_api(DIAS[a.dia_orden])} a las {a_texto(b.inicio)} pasas de {a.curso.clase.nombre} "
-                f"en {a.edificio.nombre} a {b.curso.clase.nombre} en {b.edificio.nombre} sin tiempo libre.",
-                None,
+            yield SinDescansoOut(
+                tipo="cercania",
+                detalle=(
+                    f"El {dia_api(DIAS[a.dia_orden])} a las {a_texto(b.inicio)} pasas de {a.curso.clase.nombre} "
+                    f"en {a.edificio.nombre} a {b.curso.clase.nombre} en {b.edificio.nombre} sin tiempo libre."
+                ),
+                dia=dia_api(DIAS[a.dia_orden]),
+                hora=a_texto(b.inicio),
+                desde=ParadaOut(clase=_clase(a.curso.clase), edificio=a.edificio.nombre),
+                hasta=ParadaOut(clase=_clase(b.curso.clase), edificio=b.edificio.nombre),
             )
 
 
@@ -156,7 +230,13 @@ def _huecos(p: models.PreferenciasDeEstudiante, sesiones: list[_Sesion]):
         horas = sum(fin - inicio for inicio, fin in libres) // 60
         tramos = ", ".join(f"{a_texto(i)}–{a_texto(f)}" for i, f in libres)
         plural = "hora libre" if horas == 1 else "horas libres"
-        yield "huecos", f"El {dia_api(dia)} tienes {horas} {plural} entre clases ({tramos}).", None
+        yield HorasLibresOut(
+            tipo="huecos",
+            detalle=f"El {dia_api(dia)} tienes {horas} {plural} entre clases ({tramos}).",
+            dia=dia_api(dia),
+            horas=horas,
+            tramos=[TramoOut(hora_inicio=a_texto(i), hora_fin=a_texto(f)) for i, f in libres],
+        )
 
 
 def no_cumplidas(
@@ -183,5 +263,5 @@ def no_cumplidas(
         *_cercania(p, sesiones),
         *_huecos(p, sesiones),
     ]
-    hallazgos.sort(key=lambda h: _ORDEN_TIPOS.index(h[0]))  # estable: respeta el orden dentro de cada tipo
-    return [PreferenciaNoCumplidaOut(tipo=t, detalle=d, id_clase=c) for t, d, c in hallazgos]
+    hallazgos.sort(key=lambda h: _ORDEN_TIPOS.index(h.tipo))  # estable: respeta el orden dentro de cada tipo
+    return hallazgos

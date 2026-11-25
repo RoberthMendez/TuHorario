@@ -1,4 +1,4 @@
-import type { NivelPreferencia } from '../../../../../types/Preferencias'
+import type { NivelPreferencia } from '../../types/Preferencias'
 
 interface CaraProps {
   nivel: NivelPreferencia

@@ -1,4 +1,4 @@
-import type { Genero } from '../../../../../types/Preferencias'
+import type { Genero } from '../../types/Preferencias'
 
 // Colores del profe y la profa genéricos (los de los SVG del diseño), iguales
 // para todos los profesores.

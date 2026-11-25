@@ -1,8 +1,10 @@
+import type { Dia } from '../types/Horario'
 import type {
+  NivelPreferencia,
   PreferenciasEstudiante,
   TipoPreferencia,
 } from '../types/Preferencias'
-import { enviarJson } from './api'
+import { enviarJson, obtenerJson } from './api'
 
 /*
  * Servicio de preferencias.
@@ -16,9 +18,22 @@ import { enviarJson } from './api'
  *       "preferenciaCercania": false, "preferenciaSinHuecos": true,
  *       "prioridades": [{ "tipoPreferencia": "clases", "prioridad": 1 }] }
  *     →  200 (lo guardado)
+ *   GET /estudiantes/{id}/preferencias  →  200 (lo guardado, mismo formato)
  *
- * Reemplaza todas las preferencias del estudiante.
+ * El PUT reemplaza todas las preferencias del estudiante.
  */
+
+/** Preferencias como las guarda el backend: solo ids, horas "HH:MM". */
+export interface CuerpoPreferencias {
+  clases: { idClase: number; prioridad: boolean }[]
+  franjasHabilitadas: { dia: Dia; horaInicio: string; horaFin: string }[]
+  profesores: { idProfesor: number; preferencia: NivelPreferencia }[]
+  companeros: { idEstudiante: number; idClase: number }[]
+  restringidos: number[]
+  preferenciaCercania: boolean
+  preferenciaSinHuecos: boolean
+  prioridades: { tipoPreferencia: TipoPreferencia; prioridad: number }[]
+}
 
 // Etiquetas del ranking en la vista (ver preferenciasOpcionales.ts) → tipos
 // del backend (TAD Prioridad Preferencias).
@@ -30,6 +45,10 @@ const TIPO_DE_ETIQUETA: Record<string, TipoPreferencia> = {
   'Horario sin huecos': 'huecos',
   'Cercanía entre salones': 'cercania',
 }
+
+const ETIQUETA_DE_TIPO = Object.fromEntries(
+  Object.entries(TIPO_DE_ETIQUETA).map(([etiqueta, tipo]) => [tipo, etiqueta]),
+) as Record<TipoPreferencia, string>
 
 const hora = (h: number) => `${String(h).padStart(2, '0')}:00`
 
@@ -56,7 +75,7 @@ function tieneDatos(tipo: TipoPreferencia, p: PreferenciasEstudiante) {
 }
 
 /** Cuerpo del PUT a partir de lo que arma el panel. */
-export function aCuerpo(p: PreferenciasEstudiante) {
+export function aCuerpo(p: PreferenciasEstudiante): CuerpoPreferencias {
   const tipos = [...p.prioridades]
     .sort((a, b) => a.prioridad - b.prioridad)
     .map((x) => TIPO_DE_ETIQUETA[x.tipoPreferencia])
@@ -89,6 +108,13 @@ export function aCuerpo(p: PreferenciasEstudiante) {
   }
 }
 
+/** El ranking guardado con las etiquetas de la vista, del 1 al último. */
+export function etiquetasDelRanking(cuerpo: CuerpoPreferencias): string[] {
+  return [...cuerpo.prioridades]
+    .sort((a, b) => a.prioridad - b.prioridad)
+    .map((p) => ETIQUETA_DE_TIPO[p.tipoPreferencia])
+}
+
 /** Guarda (reemplaza) todas las preferencias de un estudiante. */
 export async function guardarPreferencias(
   idEstudiante: number,
@@ -99,6 +125,17 @@ export async function guardarPreferencias(
     'PUT',
     `/estudiantes/${idEstudiante}/preferencias`,
     aCuerpo(preferencias),
+    { signal },
+  )
+}
+
+/** Preferencias guardadas de un estudiante (vacías si aún no tiene). */
+export function obtenerPreferencias(
+  idEstudiante: number,
+  signal?: AbortSignal,
+): Promise<CuerpoPreferencias> {
+  return obtenerJson<CuerpoPreferencias>(
+    `/estudiantes/${idEstudiante}/preferencias`,
     { signal },
   )
 }

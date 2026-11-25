@@ -10,6 +10,8 @@ Reglas (las mismas que simulaba ``frontend/src/services/estudiantesService.ts``)
   cifras de la cédula hasta que sea único.
 - Celular: ``310`` + 7 cifras al azar (``310 482 1937``).
 - El consecutivo vive en la base y no se reutiliza aunque se borren estudiantes.
+- Al cambiarle el nombre se rehace su correo (con la misma cédula); código,
+  cédula y celular no cambian.
 """
 
 import random
@@ -54,14 +56,19 @@ def _celular() -> str:
     return f"310 {cifras[:3]} {cifras[3:]}"
 
 
+def _correo_unico(db: Session, nombre: str, cedula: str, excluir: int | None = None) -> str:
+    cifras = 2
+    correo = f"{usuario_correo(nombre, cedula, cifras)}@{DOMINIO}"
+    while estudiantes_repo.correo_existe(db, correo, excluir) and cifras < len(cedula):
+        cifras += 1
+        correo = f"{usuario_correo(nombre, cedula, cifras)}@{DOMINIO}"
+    return correo
+
+
 def crear(db: Session, nombre: str) -> Estudiante:
     n = estudiantes_repo.siguiente_consecutivo(db)
     cedula = str(CEDULA_BASE + n)
-    cifras = 2
-    correo = f"{usuario_correo(nombre, cedula, cifras)}@{DOMINIO}"
-    while estudiantes_repo.correo_existe(db, correo) and cifras < len(cedula):
-        cifras += 1
-        correo = f"{usuario_correo(nombre, cedula, cifras)}@{DOMINIO}"
+    correo = _correo_unico(db, nombre, cedula)
 
     tipo = catalogo_repo.tipo_documento(db, TIPO_DOCUMENTO) or TipoDocumento(tipo=TIPO_DOCUMENTO)
     estudiante = estudiantes_repo.agregar(
@@ -75,6 +82,21 @@ def crear(db: Session, nombre: str) -> Estudiante:
             celular=_celular(),
         ),
     )
+    db.commit()
+    return estudiante
+
+
+def obtener(db: Session, id_estudiante: int) -> Estudiante:
+    estudiante = estudiantes_repo.obtener(db, id_estudiante)
+    if estudiante is None:
+        raise NoEncontrado(f"No existe el estudiante {id_estudiante}")
+    return estudiante
+
+
+def renombrar(db: Session, id_estudiante: int, nombre: str) -> Estudiante:
+    estudiante = obtener(db, id_estudiante)
+    estudiante.nombre = nombre
+    estudiante.correo = _correo_unico(db, nombre, estudiante.numero_documento, excluir=id_estudiante)
     db.commit()
     return estudiante
 

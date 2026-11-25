@@ -5,6 +5,8 @@ import PasosInicio from './PasosInicio'
 
 interface EstadoVacioProps {
   creando: boolean
+  /** Por qué falló el último intento de crear el estudiante. */
+  error: string | null
   onConfirmar: (nombre: string) => void
 }
 
@@ -17,6 +19,7 @@ interface EstadoVacioProps {
  */
 export default function EstadoVacio({
   creando,
+  error,
   onConfirmar,
 }: EstadoVacioProps) {
   const [nombre, setNombre] = useState('')
@@ -42,6 +45,7 @@ export default function EstadoVacio({
         <FormularioNombre
           etiqueta="Nombre del estudiante"
           creando={creando}
+          error={error}
           onConfirmar={onConfirmar}
           onCambiarNombre={setNombre}
           autoEnfocar={punteroFino}

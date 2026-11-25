@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type SyntheticEvent } from 'react'
 import type { Companero } from '../../../../../types/Preferencias'
-import AvatarCompanero from '../AvatarCompanero'
+import AvatarCompanero from '../../../../../components/avatarCompanero/AvatarCompanero'
 
 // Separación mínima entre la lista y los bordes de la ventana.
 const MARGEN = 8

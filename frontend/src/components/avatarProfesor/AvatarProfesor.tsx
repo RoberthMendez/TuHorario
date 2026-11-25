@@ -1,7 +1,4 @@
-import type {
-  Genero,
-  NivelPreferencia,
-} from '../../../../../types/Preferencias'
+import type { Genero, NivelPreferencia } from '../../types/Preferencias'
 import { APARIENCIA } from './apariencia'
 import Cara from './Cara'
 import Celebracion from './Celebracion'

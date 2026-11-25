@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
 import type {
   Companero,
   PreferenciaClase,
@@ -13,15 +21,20 @@ import { bloques } from './franjas/horas'
 import SeccionFranjas from './franjas/SeccionFranjas'
 import NuevaPreferencia from './nuevaPreferencia/NuevaPreferencia'
 import {
+  horasIniciales,
+  ordenInicial,
+  seccionesIniciales,
+} from './estadoInicial'
+import {
   PREFERENCIAS_OPCIONALES,
-  TIPO_CLASES,
   TIPO_SIN_HUECOS,
+  tipoDe,
   type IdPreferencia,
 } from './preferenciasOpcionales'
 import SeccionPrioridad from './prioridad/SeccionPrioridad'
 import SeccionProfesores from './profesores/SeccionProfesores'
 import TituloSubrayado from '../../../components/TituloSubrayado'
-import { companerosVigentes, profesoresVisibles } from './vigentes'
+import { companerosDeClases, profesoresDeClases } from './vigentes'
 
 // Lo que dura el cierre de una sección al quitarla.
 const SALIDA_MS = 300
@@ -29,14 +42,13 @@ const SALIDA_MS = 300
 const reducirMovimiento = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const tipoDe = (id: IdPreferencia) =>
-  PREFERENCIAS_OPCIONALES.find((o) => o.id === id)?.tipo ?? id
-
 interface PanelPreferenciasProps {
   /** Al desplegarse la carta, las secciones entran una tras otra. */
   animar: boolean
   /** Estudiante dueño del panel (el buscador de compañeros lo excluye). */
   idEstudiante: number
+  /** Preferencias con las que arranca (al repetir un intento). */
+  iniciales?: PreferenciasEstudiante
   /** Recibe las preferencias que cuentan cada vez que cambian. */
   onCambiarPreferencias: (preferencias: PreferenciasEstudiante) => void
 }
@@ -51,32 +63,53 @@ interface PanelPreferenciasProps {
  * hace scroll.
  *
  * Un estudiante nuevo solo tiene las clases (obligatorias). Con "Nueva
- * preferencia" añade las demás y con la X de cada una las quita. Cuando
+ * preferencia" añade las demás y con la X de cada una las quita. Las que
+ * dependen de las clases (profesores y compañeros) no se pueden añadir
+ * hasta que haya alguna, y al quitar una clase se borra lo ligado a ella. Cuando
  * hay al menos dos, aparece Prioridad de preferencias con solo las elegidas:
  * las nuevas entran de últimas.
  *
  * Los datos de todas las secciones viven aquí, para armar las preferencias
  * del estudiante y avisarlas hacia arriba (`onCambiarPreferencias`). Solo
- * cuentan las secciones activas (no las que se están quitando), los
- * profesores y compañeros de clases elegidas y los interruptores encendidos.
+ * cuentan las secciones activas (no las que se están quitando) y los
+ * interruptores encendidos.
  */
 export default function PanelPreferencias({
   animar,
   idEstudiante,
+  iniciales,
   onCambiarPreferencias,
 }: PanelPreferenciasProps) {
   // Las clases elegidas viven aquí: las demás preferencias (profesores…) se
   // basan en ellas.
-  const [clases, setClases] = useState<PreferenciaClase[]>([])
-  const [activas, setActivas] = useState<IdPreferencia[]>([])
+  const [clases, setClases] = useState<PreferenciaClase[]>(
+    iniciales?.clases ?? [],
+  )
+  const [activas, setActivas] = useState<IdPreferencia[]>(() =>
+    seccionesIniciales(iniciales),
+  )
   const [saliendo, setSaliendo] = useState<IdPreferencia[]>([])
-  const [sinHuecos, setSinHuecos] = useState(false)
-  const [orden, setOrden] = useState<string[]>([TIPO_CLASES])
-  const [profesores, setProfesores] = useState<PreferenciaProfe[]>([])
-  const [companeros, setCompaneros] = useState<PreferenciaCompanero[]>([])
-  const [restringidos, setRestringidos] = useState<Companero[]>([])
-  const [horas, setHoras] = useState<Set<string>>(new Set())
-  const [cercania, setCercania] = useState(false)
+  const [sinHuecos, setSinHuecos] = useState(
+    iniciales?.preferenciaSinHuecos ?? false,
+  )
+  const [orden, setOrden] = useState<string[]>(() =>
+    ordenInicial(iniciales, seccionesIniciales(iniciales)),
+  )
+  const [profesores, setProfesores] = useState<PreferenciaProfe[]>(
+    iniciales?.profesores ?? [],
+  )
+  const [companeros, setCompaneros] = useState<PreferenciaCompanero[]>(
+    iniciales?.companeros ?? [],
+  )
+  const [restringidos, setRestringidos] = useState<Companero[]>(
+    iniciales?.restringidos ?? [],
+  )
+  const [horas, setHoras] = useState<Set<string>>(() =>
+    horasIniciales(iniciales),
+  )
+  const [cercania, setCercania] = useState(
+    iniciales?.preferenciaCercania ?? false,
+  )
   // Pasada la entrada escalonada de la carta, lo que aparezca después (una
   // preferencia recién añadida) entra sin esperar.
   const [entradaLista, setEntradaLista] = useState(false)
@@ -102,6 +135,17 @@ export default function PanelPreferencias({
       block: 'nearest',
     })
   }, [activas])
+
+  // Al quitar una clase se van los profesores que solo dictaban esa clase y
+  // los compañeros con los que se quería ver.
+  const cambiarClases: Dispatch<SetStateAction<PreferenciaClase[]>> = (
+    valor,
+  ) => {
+    const nuevas = typeof valor === 'function' ? valor(clases) : valor
+    setClases(nuevas)
+    setProfesores((actuales) => profesoresDeClases(actuales, nuevas))
+    setCompaneros((actuales) => companerosDeClases(actuales, nuevas))
+  }
 
   const anadir = (id: IdPreferencia) => {
     recienAnadida.current = id
@@ -152,12 +196,8 @@ export default function PanelPreferencias({
       activas.includes(id) && !saliendo.includes(id)
     return {
       clases,
-      profesores: cuenta('profesores')
-        ? profesoresVisibles(profesores, clases)
-        : [],
-      companeros: cuenta('companeros')
-        ? companerosVigentes(companeros, clases)
-        : [],
+      profesores: cuenta('profesores') ? profesores : [],
+      companeros: cuenta('companeros') ? companeros : [],
       restringidos: cuenta('companeros') ? restringidos : [],
       franjasHabilitadas: cuenta('franjas') ? bloques(horas) : [],
       preferenciaSinHuecos: cuenta('franjas') && sinHuecos,
@@ -236,7 +276,9 @@ export default function PanelPreferencias({
   const secciones: { id: string; contenido: ReactNode; opcional?: true }[] = [
     {
       id: 'clases',
-      contenido: <SeccionClases clases={clases} onCambiarClases={setClases} />,
+      contenido: (
+        <SeccionClases clases={clases} onCambiarClases={cambiarClases} />
+      ),
     },
     ...PREFERENCIAS_OPCIONALES.filter((o) => activas.includes(o.id)).map(
       (o) => ({
@@ -250,7 +292,11 @@ export default function PanelPreferencias({
     secciones.push({
       id: 'nueva',
       contenido: (
-        <NuevaPreferencia disponibles={disponibles} onAnadir={anadir} />
+        <NuevaPreferencia
+          disponibles={disponibles}
+          sinClases={clases.length === 0}
+          onAnadir={anadir}
+        />
       ),
     })
   }

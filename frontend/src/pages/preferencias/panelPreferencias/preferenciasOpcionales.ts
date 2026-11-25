@@ -16,6 +16,8 @@ export interface PreferenciaOpcional {
   titulo: string
   descripcion: string
   icono: string
+  /** Se basa en las clases elegidas: sin clases no se puede añadir. */
+  requiereClases: boolean
 }
 
 export const TIPO_CLASES = 'Clases con prioridad'
@@ -31,6 +33,7 @@ export const PREFERENCIAS_OPCIONALES: PreferenciaOpcional[] = [
     titulo: 'Profesores',
     descripcion: 'Elige con qué profesores quieres ver tus clases.',
     icono: iconoProfesores,
+    requiereClases: true,
   },
   {
     id: 'companeros',
@@ -38,6 +41,7 @@ export const PREFERENCIAS_OPCIONALES: PreferenciaOpcional[] = [
     titulo: 'Compañeros',
     descripcion: 'Ve clases con tus amigos (o evita a alguien).',
     icono: iconoCompaneros,
+    requiereClases: true,
   },
   {
     id: 'franjas',
@@ -45,6 +49,7 @@ export const PREFERENCIAS_OPCIONALES: PreferenciaOpcional[] = [
     titulo: 'Franjas Habilitadas',
     descripcion: 'Marca las horas en las que quieres ver clase.',
     icono: iconoFranjas,
+    requiereClases: false,
   },
   {
     id: 'cercania',
@@ -52,5 +57,10 @@ export const PREFERENCIAS_OPCIONALES: PreferenciaOpcional[] = [
     titulo: 'Cercanía entre salones',
     descripcion: 'Que tus salones queden cerca entre sí.',
     icono: iconoCercania,
+    requiereClases: false,
   },
 ]
+
+/** Nombre con el que una preferencia aparece en Prioridad de preferencias. */
+export const tipoDe = (id: IdPreferencia) =>
+  PREFERENCIAS_OPCIONALES.find((o) => o.id === id)?.tipo ?? id

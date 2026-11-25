@@ -1,6 +1,6 @@
 import type { Genero, NivelPreferencia } from '../../../../types/Preferencias'
 import { FONDO_NIVEL } from '../../../../styles/colores'
-import AvatarProfesor from './avatarProfesor/AvatarProfesor'
+import AvatarProfesor from '../../../../components/avatarProfesor/AvatarProfesor'
 
 interface NivelProfesorProps {
   nivel: NivelPreferencia

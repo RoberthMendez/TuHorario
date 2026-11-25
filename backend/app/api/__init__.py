@@ -2,9 +2,10 @@
 
 from fastapi import APIRouter
 
-from app.api import catalogo, estudiantes, horarios
+from app.api import catalogo, ejemplo, estudiantes, horarios
 
 router = APIRouter()
 router.include_router(catalogo.router)
 router.include_router(estudiantes.router)
 router.include_router(horarios.router)
+router.include_router(ejemplo.router)

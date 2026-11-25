@@ -86,15 +86,20 @@ def test_clase_no_asignada() -> None:
     [r] = no_cumplidas(p, [c], {}, {})
     assert (r.tipo, r.id_clase) == ("clases", CALCULO.id)
     assert r.detalle == "No te asignaron Cálculo (era prioritaria)."
+    assert (r.caso, r.clase.nombre, r.prioridad) == ("claseSinCupo", "Cálculo", True)
 
 
 def test_franjas_fuera_y_en_parte_fuera() -> None:
     p = prefs(franjas=[("lunes", 7, 8), ("miercoles", 14, 16)])
     c = curso(1, CALCULO, [("lunes", 7, 9), ("miercoles", 14, 16), ("viernes", 7, 9)])
-    detalles = [r.detalle for r in no_cumplidas(p, [c], {}, {})]
-    assert detalles == [
+    resultado = no_cumplidas(p, [c], {}, {})
+    assert [r.detalle for r in resultado] == [
         "Cálculo el lunes de 07:00 a 09:00 queda en parte fuera de tus franjas.",
         "Cálculo el viernes de 07:00 a 09:00 queda fuera de tus franjas.",
+    ]
+    assert [(r.caso, r.dia, r.hora_inicio, r.hora_fin, r.parcial) for r in resultado] == [
+        ("fueraDeFranja", "lunes", "07:00", "09:00", True),
+        ("fueraDeFranja", "viernes", "07:00", "09:00", False),
     ]
 
 
@@ -111,14 +116,19 @@ def test_profesor_peor_calificado_vetado_o_sin_calificar() -> None:
     [r] = no_cumplidas(p, [con_natalia], {}, clases_de)
     assert r.tipo == "profesores"
     assert r.detalle == "En Cálculo te tocó Natalia (1/3) y preferías a Pedro (3/3)."
+    assert r.caso == "otroProfesor"
+    assert (r.profesor.nombre, r.profesor.genero, r.profesor.nota) == ("Natalia", "femenino", 1)
+    assert (r.preferido.nombre, r.preferido.genero, r.preferido.nota) == ("Pedro", "masculino", 3)
 
     vetado = prefs(profes=[(NATALIA, 0)])
     [r] = no_cumplidas(vetado, [con_natalia], {}, clases_de)
     assert r.detalle == "En Cálculo te tocó Natalia, a quien no querías ver."
+    assert (r.caso, r.clase.nombre, r.profesor.nombre, r.profesor.nota) == ("profesorVetado", "Cálculo", "Natalia", 0)
 
     sin_profe = curso(2, FISICA, [("lunes", 7, 9)])
     [r] = no_cumplidas(prefs(profes=[(PEDRO, 2)]), [sin_profe], {}, clases_de)
     assert r.detalle == "En Física te tocó un curso sin profesor (sin calificar) y preferías a Pedro (2/3)."
+    assert (r.caso, r.profesor, r.preferido.nota) == ("otroProfesor", None, 2)
 
 
 def test_profesor_que_no_dicta_la_clase_no_cuenta() -> None:
@@ -134,11 +144,16 @@ def test_companeros() -> None:
     mio = curso(1, CALCULO, [("lunes", 7, 9)])
     otro = curso(2, CALCULO, [("martes", 7, 9)])
     p = prefs(companeros=[(beto, CALCULO), (caro, CALCULO), (dani, FISICA)])
-    detalles = [r.detalle for r in no_cumplidas(p, [mio], {2: [otro], 3: []}, {})]
-    assert detalles == [
+    resultado = no_cumplidas(p, [mio], {2: [otro], 3: []}, {})
+    assert [r.detalle for r in resultado] == [
         "No quedaste con Beto en Cálculo: tú quedaste en MAT-1-1 y Beto en MAT-1-2.",
         "No quedaste con Caro en Cálculo: Caro no quedó inscrito en esa clase.",
         "No quedaste con Dani en Física: no te asignaron la clase.",
+    ]
+    assert [(r.caso, r.companero.nombre, r.motivo, r.curso, r.curso_companero) for r in resultado] == [
+        ("sinCompanero", "Beto", "otroCurso", "MAT-1-1", "MAT-1-2"),
+        ("sinCompanero", "Caro", "companeroSinClase", "MAT-1-1", None),
+        ("sinCompanero", "Dani", "sinClase", None, None),
     ]
 
 
@@ -148,6 +163,8 @@ def test_restringido_en_el_mismo_curso() -> None:
     resultado = no_cumplidas(prefs(restringidos=[eva]), [c1, c2], {5: [c2]}, {})
     assert tipos(resultado) == [("estudiantes", FISICA.id)]
     assert resultado[0].detalle == "Quedaste con Eva en Física (FIS-1-2)."
+    r = resultado[0]
+    assert (r.caso, r.restringido.id, r.restringido.nombre, r.curso) == ("conRestringido", 5, "Eva", "FIS-1-2")
 
 
 def test_cercania_solo_clases_seguidas_en_edificios_distintos() -> None:
@@ -156,6 +173,9 @@ def test_cercania_solo_clases_seguidas_en_edificios_distintos() -> None:
     [r] = no_cumplidas(prefs(cercania=True), [a, b], {}, {})
     assert (r.tipo, r.id_clase) == ("cercania", None)
     assert r.detalle == "El lunes a las 09:00 pasas de Cálculo en Central a Física en Lejano sin tiempo libre."
+    assert (r.caso, r.dia, r.hora) == ("sinDescanso", "lunes", "09:00")
+    assert (r.desde.clase.nombre, r.desde.edificio) == ("Cálculo", "Central")
+    assert (r.hasta.clase.nombre, r.hasta.edificio) == ("Física", "Lejano")
     assert no_cumplidas(prefs(), [a, b], {}, {}) == []
 
 
@@ -166,6 +186,8 @@ def test_huecos_por_dia() -> None:
     [r] = no_cumplidas(prefs(huecos=True), [a, b, c], {}, {})
     assert r.tipo == "huecos"
     assert r.detalle == "El lunes tienes 3 horas libres entre clases (09:00–11:00, 13:00–14:00)."
+    assert (r.caso, r.dia, r.horas) == ("horasLibres", "lunes", 3)
+    assert [(t.hora_inicio, t.hora_fin) for t in r.tramos] == [("09:00", "11:00"), ("13:00", "14:00")]
     assert no_cumplidas(prefs(), [a, b, c], {}, {}) == []
 
 

@@ -20,8 +20,11 @@ def por_ids(db: Session, ids: set[int]) -> dict[int, Estudiante]:
     return {e.id: e for e in db.scalars(select(Estudiante).where(Estudiante.id.in_(ids)))}
 
 
-def correo_existe(db: Session, correo: str) -> bool:
-    return db.scalar(select(exists().where(Estudiante.correo == correo))) or False
+def correo_existe(db: Session, correo: str, excluir: int | None = None) -> bool:
+    condicion = Estudiante.correo == correo
+    if excluir is not None:
+        condicion = condicion & (Estudiante.id != excluir)
+    return db.scalar(select(exists().where(condicion))) or False
 
 
 def _sin_tildes(texto: str) -> str:
@@ -72,4 +75,10 @@ def eliminar(db: Session, id_estudiante: int) -> None:
     """Borra el estudiante; la base borra en cascada sus preferencias, inscripciones
     y las preferencias de otros que lo referencian."""
     db.execute(delete(Estudiante).where(Estudiante.id == id_estudiante))
+    db.expire_all()
+
+
+def eliminar_con_nombres(db: Session, nombres: set[str]) -> None:
+    """Borra (en cascada, como ``eliminar``) a los estudiantes que se llamen exactamente así."""
+    db.execute(delete(Estudiante).where(Estudiante.nombre.in_(nombres)))
     db.expire_all()

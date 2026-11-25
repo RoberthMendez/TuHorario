@@ -98,7 +98,14 @@ def test_respeta_cupos_y_prioritarias_primero(client, db: Session) -> None:
         {"clase": {"id": ANALISIS, "codigo": "SIS-301", "nombre": "Análisis de Algoritmos"}, "prioridad": False}
     ]
     assert horarios[otro]["preferenciasNoCumplidas"] == [
-        {"tipo": "clases", "detalle": "No te asignaron Análisis de Algoritmos.", "idClase": ANALISIS}
+        {
+            "tipo": "clases",
+            "detalle": "No te asignaron Análisis de Algoritmos.",
+            "idClase": ANALISIS,
+            "caso": "claseSinCupo",
+            "clase": {"id": ANALISIS, "codigo": "SIS-301", "nombre": "Análisis de Algoritmos"},
+            "prioridad": False,
+        }
     ]
     por_curso = Counter(c for (c, _) in db.execute(select(inscripciones.c.curso_id, inscripciones.c.estudiante_id)))
     assert max(por_curso.values()) == 1
@@ -130,6 +137,8 @@ def test_companero_fuera_de_la_corrida_no_rompe(client, db: Session) -> None:
     horarios = generar(client, [ana])
     assert len(horarios) == 1
     assert len(horarios[0]["cursos"]) == 2
+    curso_ana = next(c for c in horarios[0]["cursos"] if c["clase"]["id"] == 1)
+    calculo = {"id": 1, "codigo": "MAT-101", "nombre": "Cálculo Diferencial"}
     # Beto no se generó (no tiene cursos): su preferencia no se cumple. Caro tampoco
     # está inscrito, así que la restricción sí se cumple.
     assert horarios[0]["preferenciasNoCumplidas"] == [
@@ -137,16 +146,28 @@ def test_companero_fuera_de_la_corrida_no_rompe(client, db: Session) -> None:
             "tipo": "estudiantes",
             "detalle": "No quedaste con Beto Díaz en Cálculo Diferencial: Beto Díaz no quedó inscrito en esa clase.",
             "idClase": 1,
+            "caso": "sinCompanero",
+            "clase": calculo,
+            "companero": {"id": beto, "nombre": "Beto Díaz"},
+            "motivo": "companeroSinClase",
+            "curso": curso_ana["codigo"],
+            "cursoCompanero": None,
         }
     ]
 
     # Si Caro queda en el mismo curso que Ana, se reporta.
-    curso_ana = next(c for c in horarios[0]["cursos"] if c["clase"]["id"] == 1)
     db.execute(inscripciones.insert().values(curso_id=curso_ana["id"], estudiante_id=caro))
     db.commit()
     [leido] = client.get("/horarios", params={"estudiantes": ana}).json()
-    detalle = f"Quedaste con Caro León en Cálculo Diferencial ({curso_ana['codigo']})."
-    assert {"tipo": "estudiantes", "detalle": detalle, "idClase": 1} in leido["preferenciasNoCumplidas"]
+    assert {
+        "tipo": "estudiantes",
+        "detalle": f"Quedaste con Caro León en Cálculo Diferencial ({curso_ana['codigo']}).",
+        "idClase": 1,
+        "caso": "conRestringido",
+        "clase": calculo,
+        "restringido": {"id": caro, "nombre": "Caro León"},
+        "curso": curso_ana["codigo"],
+    } in leido["preferenciasNoCumplidas"]
 
 
 def test_estudiante_sin_preferencias_e_inexistente(client) -> None:

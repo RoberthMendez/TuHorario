@@ -106,6 +106,8 @@
   --animate-sacudir: sacudir 0.45s ease-out;
   /* "Así no": la carta de un estudiante sin nombre niega de lado a lado. */
   --animate-negar: negar 0.42s ease-in-out;
+  /* Aviso de los datos ocultos: su ojito parpadea de vez en cuando. */
+  --animate-pestanear: pestanear 3.6s ease-in-out infinite;
   /* Pantalla de carga de los horarios: las piezas del logo llegan girando y
      encajan (con un "clic" del rompecabezas al completarse), los bloques del
      mini horario se van llenando uno a uno y los puntos saltan. */
@@ -233,6 +235,20 @@
     40%,
     80% {
       transform: translateX(calc(var(--u) * 7));
+    }
+  }
+  @keyframes pestanear {
+    0%,
+    86%,
+    100% {
+      transform: scaleY(1);
+    }
+    90%,
+    94% {
+      transform: scaleY(0.15);
+    }
+    92% {
+      transform: scaleY(1);
     }
   }
   @keyframes sacudir {

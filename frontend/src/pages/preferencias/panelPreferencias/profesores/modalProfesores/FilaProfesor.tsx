@@ -4,7 +4,7 @@ import type {
 } from '../../../../../types/Preferencias'
 import { FONDO_PASTEL } from '../../../../../styles/colores'
 import TextoResaltado from '../../modalSeleccion/TextoResaltado'
-import AvatarProfesor from '../avatarProfesor/AvatarProfesor'
+import AvatarProfesor from '../../../../../components/avatarProfesor/AvatarProfesor'
 
 interface FilaProfesorProps {
   profesor: Profesor

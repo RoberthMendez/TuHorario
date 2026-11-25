@@ -5,7 +5,7 @@ import type {
   ClaseNoAsignada,
   CursoAsignado,
 } from '../../../../types/HorarioEstudiante'
-import BloqueCurso from './BloqueCurso'
+import BloqueCurso from './bloqueCurso/BloqueCurso'
 import ClasesSinCupo from './ClasesSinCupo'
 import ConteoClases from './ConteoClases'
 import EncabezadoDias from './EncabezadoDias'
@@ -40,7 +40,7 @@ export default function Cronograma({
     <Seccion
       icono={iconoCronograma}
       titulo="Cronograma semanal"
-      descripcion="Cada clase ocupa la franja en la que se dicta, con su profesor y su salón."
+      descripcion="Cada clase ocupa la franja en la que se dicta, con su profesor y su salón. Pasa el mouse por una para ver su código."
       extra={
         <ConteoClases
           inscritas={cursos.length}

@@ -13,7 +13,6 @@ import type {
 } from '../../../../types/Preferencias'
 import { FONDO_COMPANERO } from '../../../../styles/colores'
 import SeccionPreferencia from '../SeccionPreferencia'
-import { companerosVigentes } from '../vigentes'
 import BuscadorCompaneros from './buscadorCompaneros/BuscadorCompaneros'
 import ClasesCompanero from './clasesCompanero/ClasesCompanero'
 import BotonRestringir from './restringidos/BotonRestringir'
@@ -63,8 +62,20 @@ export default function SeccionCompaneros({
   const [tapaAbierta, setTapaAbierta] = useState(false)
   const [sacudiendo, setSacudiendo] = useState(false)
   // Color de cada compañero (índice en FONDO_COMPANERO). Se le asigna al
-  // guardarle clases por primera vez y no cambia después.
-  const [colores, setColores] = useState<Map<number, number>>(new Map())
+  // guardarle clases por primera vez y no cambia después. Los que ya llegan
+  // con clases (al repetir un intento) los reciben en orden.
+  const [colores, setColores] = useState<Map<number, number>>(() => {
+    const iniciales = new Map<number, number>()
+    for (const { estudiantePreferido } of preferencias) {
+      if (!iniciales.has(estudiantePreferido.id)) {
+        iniciales.set(
+          estudiantePreferido.id,
+          iniciales.size % FONDO_COMPANERO.length,
+        )
+      }
+    }
+    return iniciales
+  })
 
   const escena = useRef<HTMLDivElement>(null)
   const avatar = useRef<HTMLSpanElement>(null)
@@ -72,20 +83,17 @@ export default function SeccionCompaneros({
   const despedida = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(despedida.current), [])
 
-  // Solo cuentan las preferencias de clases que siguen elegidas (si se
-  // quita una clase y se vuelve a agregar, sus compañeros regresan).
-  const idsClases = new Set(clases.map((p) => p.clase.id))
-  const vigentes = companerosVigentes(preferencias, clases)
+  // Al quitar una clase, el panel borra los compañeros de esa clase.
   const companerosDeClase = (idClase: number) =>
-    vigentes
+    preferencias
       .filter((p) => p.clase.id === idClase)
       .map((p) => p.estudiantePreferido)
   const clasesDe = (idCompanero: number) =>
-    vigentes
+    preferencias
       .filter((p) => p.estudiantePreferido.id === idCompanero)
       .map((p) => p.clase.id)
   const clasesPorCompanero = new Map<number, number>()
-  for (const p of vigentes) {
+  for (const p of preferencias) {
     const id = p.estudiantePreferido.id
     clasesPorCompanero.set(id, (clasesPorCompanero.get(id) ?? 0) + 1)
   }
@@ -108,15 +116,11 @@ export default function SeccionCompaneros({
       return nueva
     })
 
-  // Guarda las clases marcadas (reemplaza las que tenía en clases vigentes).
+  // Guarda las clases marcadas (reemplaza las que tenía).
   const confirmar = () => {
     if (!enEspera) return
     setPreferencias((actuales) => [
-      ...actuales.filter(
-        (p) =>
-          p.estudiantePreferido.id !== enEspera.id ||
-          !idsClases.has(p.clase.id),
-      ),
+      ...actuales.filter((p) => p.estudiantePreferido.id !== enEspera.id),
       ...clases
         .filter((p) => seleccion.has(p.clase.id))
         .map((p) => ({ estudiantePreferido: enEspera, clase: p.clase })),

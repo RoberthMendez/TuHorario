@@ -1,5 +1,5 @@
 import type { Companero } from '../../../../../types/Preferencias'
-import AvatarCompanero from '../AvatarCompanero'
+import AvatarCompanero from '../../../../../components/avatarCompanero/AvatarCompanero'
 
 interface FilaRestringidoProps {
   companero: Companero

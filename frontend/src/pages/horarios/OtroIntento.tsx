@@ -5,14 +5,17 @@ import Boton from '../../components/Boton'
 interface OtroIntentoProps {
   /** Vuelve a Preferencias con los mismos estudiantes y preferencias. */
   onRepetir: () => void
-  /** Vuelve a Preferencias vacía, para armar un intento nuevo. */
+  /** Borra a los estudiantes de este intento y abre Preferencias vacía. */
   onEmpezarDeCero: () => void
+  /** Mientras se borran los estudiantes. */
+  borrando: boolean
 }
 
 // Cierre de la página: probar otra vez, con lo mismo o desde cero.
 export default function OtroIntento({
   onRepetir,
   onEmpezarDeCero,
+  borrando,
 }: OtroIntentoProps) {
   return (
     <section className="flex flex-col gap-6 rounded-pie border-2 border-bunting bg-white px-8 py-7 shadow-carta escritorio:flex-row escritorio:items-center escritorio:justify-between">
@@ -27,15 +30,17 @@ export default function OtroIntento({
       </div>
       <div className="flex shrink-0 flex-wrap gap-x-4 gap-y-5">
         <Boton
-          texto="Desde cero"
+          texto={borrando ? 'Borrando…' : 'Desde cero'}
           icono={iconoDeCero}
           variante="claro"
+          ocupado={borrando}
           onClick={onEmpezarDeCero}
         />
         <Boton
           texto="Repetir intento"
           icono={iconoRepetir}
           variante="panel"
+          deshabilitado={borrando}
           onClick={onRepetir}
         />
       </div>

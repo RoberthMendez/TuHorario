@@ -1,6 +1,6 @@
 import { useEffect, useRef, type Ref } from 'react'
 import type { Companero } from '../../../../../types/Preferencias'
-import AvatarCompanero from '../AvatarCompanero'
+import AvatarCompanero from '../../../../../components/avatarCompanero/AvatarCompanero'
 
 interface ChipEnEsperaProps {
   companero: Companero

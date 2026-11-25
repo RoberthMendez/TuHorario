@@ -9,6 +9,8 @@ interface BotonProps {
   variante?: 'inicio' | 'panel' | 'claro'
   /** Mientras se espera una respuesta: no responde y muestra cursor de espera. */
   ocupado?: boolean
+  /** Todavía no se puede usar (falta algo): se ve apagado. */
+  deshabilitado?: boolean
 }
 
 const estilos = {
@@ -41,15 +43,16 @@ export default function Boton({
   onClick,
   variante = 'inicio',
   ocupado = false,
+  deshabilitado = false,
 }: BotonProps) {
   const estilo = estilos[variante]
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={ocupado}
+      disabled={ocupado || deshabilitado}
       aria-busy={ocupado || undefined}
-      className={`boton-3d inline-flex shrink-0 items-center border-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cerulean disabled:pointer-events-none disabled:opacity-80 ${estilo.boton}`}
+      className={`boton-3d inline-flex shrink-0 items-center border-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cerulean disabled:pointer-events-none ${deshabilitado ? 'opacity-50 grayscale-50' : 'disabled:opacity-80'} ${estilo.boton}`}
     >
       {texto}
       {icono && (

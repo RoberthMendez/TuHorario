@@ -1,7 +1,8 @@
 """Datos semilla: el catálogo con el que arranca una base vacía.
 
-Mismas clases y profesores que tenían los mocks del front (mismos ids,
-códigos, nombres, género y clases que dicta cada profesor), más tipos de
+Las clases y los primeros 28 profesores vienen de los mocks del front (mismos
+ids, códigos, nombres y género); se añadieron profesores y clases dictadas
+para que cada clase tenga al menos 3 profesores. Además: tipos de
 documento, edificios con coordenadas, salones y cursos con sus sesiones. No
 se siembran estudiantes: los crea el usuario desde el front.
 
@@ -44,29 +45,30 @@ CLASES = [
     (20, "ARQ-499", "Proyecto de Grado"),
 ]
 
-# (id, nombre, género, ids de las clases que dicta)
+# (id, nombre, género, ids de las clases que dicta). Cada clase la dictan al
+# menos 3 profesores.
 PROFESORES = [
     (1, "Natalia Pardo", "femenino", [1, 2]),
-    (2, "Sergio Quintero", "masculino", [1]),
-    (3, "Carlos Mejía", "masculino", [2, 3]),
-    (4, "Laura Restrepo", "femenino", [3]),
-    (5, "Andrés Rojas", "masculino", [4]),
+    (2, "Sergio Quintero", "masculino", [1, 2]),
+    (3, "Carlos Mejía", "masculino", [2, 3, 5]),
+    (4, "Laura Restrepo", "femenino", [3, 4]),
+    (5, "Andrés Rojas", "masculino", [4, 1]),
     (6, "Marcela Hurtado", "femenino", [4, 5]),
-    (7, "Julián Gómez", "masculino", [5]),
+    (7, "Julián Gómez", "masculino", [5, 3]),
     (8, "Diana Castro", "femenino", [6]),
-    (9, "Rodrigo Cañas", "masculino", [7]),
+    (9, "Rodrigo Cañas", "masculino", [7, 8]),
     (10, "Paola Vargas", "femenino", [7, 8]),
-    (11, "Rodrigo Hurtado", "masculino", [8]),
+    (11, "Rodrigo Hurtado", "masculino", [8, 7]),
     (12, "Camila Ortiz", "femenino", [9]),
     (13, "Felipe Salcedo", "masculino", [9]),
-    (14, "Rodrigo Rueda", "masculino", [10, 11]),
-    (15, "Valentina Ríos", "femenino", [10]),
-    (16, "Mauricio Vargas", "masculino", [11, 12]),
+    (14, "Rodrigo Rueda", "masculino", [10, 11, 18]),
+    (15, "Valentina Ríos", "femenino", [10, 11]),
+    (16, "Mauricio Vargas", "masculino", [11, 12, 10]),
     (17, "Juliana Martínez", "femenino", [12, 13]),
-    (18, "Óscar Bernal", "masculino", [13]),
-    (19, "Catalina Duarte", "femenino", [14]),
-    (20, "Hernán Moreno", "masculino", [14, 15]),
-    (21, "Lucía Fernández", "femenino", [15]),
+    (18, "Óscar Bernal", "masculino", [13, 12]),
+    (19, "Catalina Duarte", "femenino", [14, 15]),
+    (20, "Hernán Moreno", "masculino", [14, 15, 18]),
+    (21, "Lucía Fernández", "femenino", [15, 14]),
     (22, "Daniel Herrera", "masculino", [16]),
     (23, "Sofía Navarro", "femenino", [16]),
     (24, "Germán Pineda", "masculino", [17]),
@@ -74,6 +76,16 @@ PROFESORES = [
     (26, "Ricardo Silva", "masculino", [18]),
     (27, "Mónica Ramírez", "femenino", [19]),
     (28, "Esteban Ruiz", "masculino", [20]),
+    (29, "Beatriz Salazar", "femenino", [6]),
+    (30, "Alejandro Torres", "masculino", [6]),
+    (31, "Gloria Medina", "femenino", [9]),
+    (32, "Fernando Cárdenas", "masculino", [13]),
+    (33, "Isabel Montoya", "femenino", [16]),
+    (34, "Hugo Becerra", "masculino", [17]),
+    (35, "Claudia Peña", "femenino", [19]),
+    (36, "Gustavo León", "masculino", [19]),
+    (37, "Verónica Arango", "femenino", [20]),
+    (38, "Martín Lozano", "masculino", [20]),
 ]
 
 # (nombre, dirección, x, y en metros dentro del campus, prefijo de los salones)

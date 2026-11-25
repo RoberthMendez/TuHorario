@@ -9,6 +9,8 @@ interface NombrarEstudianteProps {
   /** Número que tendrá la carta del nuevo estudiante. */
   numero: number
   creando: boolean
+  /** Por qué falló el último intento de crear el estudiante. */
+  error: string | null
   onConfirmar: (nombre: string) => void
 }
 
@@ -20,6 +22,7 @@ interface NombrarEstudianteProps {
 export default function NombrarEstudiante({
   numero,
   creando,
+  error,
   onConfirmar,
 }: NombrarEstudianteProps) {
   const formulario = useRef<ControlFormularioNombre>(null)
@@ -41,6 +44,7 @@ export default function NombrarEstudiante({
       <FormularioNombre
         etiqueta="¿Cómo se llama tu estudiante?"
         creando={creando}
+        error={error}
         onConfirmar={onConfirmar}
         ref={formulario}
         autoEnfocar

@@ -1,21 +1,30 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import iconoRepetir from '../../assets/otroIntento/icono-repetir.svg'
+import AvisoError from '../../components/AvisoError'
+import Boton from '../../components/Boton'
 import FondoCuadricula from '../../components/FondoCuadricula'
 import Logo from '../../components/Logo'
+import { idsDeTexto, rutaHorarios, type EstadoHorarios } from '../../rutas'
+import { mensajeDeError } from '../../services/api'
+import { crearEjemplo } from '../../services/ejemploService'
 import {
   crearEstudiante,
   eliminarEstudiante,
+  renombrarEstudiante,
 } from '../../services/estudiantesService'
-import { generarHorarios } from '../../services/horariosService'
 import { guardarPreferencias } from '../../services/preferenciasService'
 import type { Estudiante } from '../../types/Estudiante'
-import type { HorarioEstudiante } from '../../types/HorarioEstudiante'
 import type { PreferenciasEstudiante } from '../../types/Preferencias'
+import CargandoIntento from './CargandoIntento'
+import CargarEjemplo from './CargarEjemplo'
 import CartaEstudiante from './cartaEstudiante/CartaEstudiante'
 import ConfirmarFinal from './ConfirmarFinal'
 import Encabezado from './encabezado/Encabezado'
 import EstadoVacio from './estadoVacio/EstadoVacio'
 import NombrarEstudiante from './nombrarEstudiante/NombrarEstudiante'
 import NuevoEstudiante from './NuevoEstudiante'
+import { recuperarIntento, type Intento } from './recuperarIntento'
 
 /*
  * Página larga (scroll vertical normal), vista "desde más lejos": todo va
@@ -31,9 +40,17 @@ import NuevoEstudiante from './NuevoEstudiante'
  * uno, su carta se pliega y las de abajo suben (y se renumeran); sin
  * estudiantes vuelve la bienvenida.
  *
- * "Finalizar" guarda las preferencias de cada estudiante en el backend y
- * genera los horarios de todos. El resultado queda en `horarios` (todavía no
- * hay pantalla de resultados).
+ * Los ids de los estudiantes van en la URL (`?estudiantes=1,2,3`). Si se
+ * llega con ellos ("Repetir intento", "atrás" desde Horarios o una recarga),
+ * se recuperan del backend con sus preferencias guardadas.
+ *
+ * Debajo de la bienvenida, "Cargar ejemplo" crea en el backend los 10
+ * estudiantes del ejemplo de la sustentación y los muestra igual que un
+ * intento recuperado; no finaliza.
+ *
+ * "Finalizar" guarda las preferencias de cada estudiante en el backend y va a
+ * Horarios, que corre el algoritmo. No se puede finalizar mientras algún
+ * estudiante no tenga clases: el aviso dice a quiénes les faltan.
  */
 // Lo que tarda en plegarse la carta de un estudiante eliminado.
 const SALIDA_MS = 320
@@ -49,47 +66,137 @@ const SIN_PREFERENCIAS: PreferenciasEstudiante = {
   prioridades: [],
 }
 
-const mensajeDe = (error: unknown) =>
-  error instanceof Error ? error.message : 'Error desconocido'
-
 export default function Preferencias() {
+  const navegar = useNavigate()
+  const [parametros, setParametros] = useSearchParams()
+  // Intento por recuperar: los ids con los que se llegó (se leen una vez).
+  const [idsIniciales] = useState(() =>
+    idsDeTexto(parametros.get('estudiantes')),
+  )
+  const [recuperando, setRecuperando] = useState(idsIniciales.length > 0)
+  const [errorRecuperar, setErrorRecuperar] = useState<string | null>(null)
+  const [vecesRecuperar, setVecesRecuperar] = useState(0)
+  // Preferencias guardadas de los estudiantes recuperados: con ellas arranca
+  // el panel de cada uno.
+  const [iniciales, setIniciales] = useState(
+    new Map<number, PreferenciasEstudiante>(),
+  )
+
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([])
   const [nombrando, setNombrando] = useState(false)
   const [creando, setCreando] = useState(false)
+  const [errorCrear, setErrorCrear] = useState<string | null>(null)
   const [recienCreado, setRecienCreado] = useState<number | null>(null)
   const [eliminando, setEliminando] = useState<number[]>([])
   const [finalizando, setFinalizando] = useState(false)
   const [errorFinal, setErrorFinal] = useState<string | null>(null)
-  const [, setHorarios] = useState<HorarioEstudiante[] | null>(null)
+  const [cargandoEjemplo, setCargandoEjemplo] = useState(false)
+  const [errorEjemplo, setErrorEjemplo] = useState<string | null>(null)
   // Preferencias de cada estudiante (por id), tal como las arma su panel. No
   // se pintan: solo se envían al finalizar, así que no hace falta re-render.
   const preferencias = useRef(new Map<number, PreferenciasEstudiante>())
+  // Estudiantes con al menos una clase (lo único que hay que repintar al
+  // cambiar las preferencias: habilita "Finalizar").
+  const [conClases, setConClases] = useState<Set<number>>(new Set())
   // Estudiantes borrados en esta sesión: otros pueden tenerlos aún como
   // compañeros o restringidos.
   const eliminados = useRef(new Set<number>())
 
+  // Pone en la página a los estudiantes de un intento (recuperado o el
+  // ejemplo); el panel de cada uno arranca con sus preferencias guardadas.
+  const mostrarIntento = useCallback((intento: Intento) => {
+    for (const [id, p] of intento.preferencias) {
+      preferencias.current.set(id, p)
+    }
+    setConClases(
+      new Set(
+        [...intento.preferencias]
+          .filter(([, p]) => p.clases.length > 0)
+          .map(([id]) => id),
+      ),
+    )
+    setIniciales(intento.preferencias)
+    setEstudiantes(intento.estudiantes)
+  }, [])
+
+  useEffect(() => {
+    if (idsIniciales.length === 0) return
+    const controlador = new AbortController()
+    recuperarIntento(idsIniciales, controlador.signal)
+      .then((intento) => {
+        mostrarIntento(intento)
+        setRecuperando(false)
+      })
+      .catch((error: unknown) => {
+        if (!controlador.signal.aborted) {
+          setErrorRecuperar(mensajeDeError(error))
+        }
+      })
+    return () => controlador.abort()
+  }, [idsIniciales, vecesRecuperar, mostrarIntento])
+
+  // La URL sigue a la lista de estudiantes (sin agregar pasos al historial).
+  useEffect(() => {
+    if (recuperando) return
+    const ids = estudiantes.map((e) => e.id).join(',')
+    if ((parametros.get('estudiantes') ?? '') === ids) return
+    setParametros(ids ? { estudiantes: ids } : {}, { replace: true })
+  }, [estudiantes, recuperando, parametros, setParametros])
+
   const cambiarPreferencias = useCallback(
     (id: number, nuevas: PreferenciasEstudiante) => {
       preferencias.current.set(id, nuevas)
+      const tiene = nuevas.clases.length > 0
+      setConClases((actual) => {
+        if (actual.has(id) === tiene) return actual
+        const siguiente = new Set(actual)
+        if (tiene) siguiente.add(id)
+        else siguiente.delete(id)
+        return siguiente
+      })
     },
     [],
   )
 
   const crear = async (nombre: string) => {
     setCreando(true)
+    setErrorCrear(null)
     try {
       const nuevo = await crearEstudiante(nombre)
       setEstudiantes((lista) => [...lista, nuevo])
       setRecienCreado(nuevo.id)
       setNombrando(false)
     } catch (error) {
-      console.error('No se pudo crear el estudiante:', error)
+      setErrorCrear(mensajeDeError(error))
     } finally {
       setCreando(false)
     }
   }
 
+  // Solo se ofrece con la página vacía, así que reemplaza la lista.
+  const cargarEjemplo = async () => {
+    setCargandoEjemplo(true)
+    setErrorEjemplo(null)
+    try {
+      const creados = await crearEjemplo()
+      mostrarIntento(await recuperarIntento(creados.map((e) => e.id)))
+    } catch (error) {
+      setErrorEjemplo(`No pudimos cargar el ejemplo: ${mensajeDeError(error)}`)
+    } finally {
+      setCargandoEjemplo(false)
+    }
+  }
+
+  // Si el servicio falla, el error sube al editor del nombre.
+  const renombrar = async (id: number, nombre: string) => {
+    const actualizado = await renombrarEstudiante(id, nombre)
+    setEstudiantes((lista) => lista.map((e) => (e.id === id ? actualizado : e)))
+  }
+
+  const sinClases = estudiantes.filter((e) => !conClases.has(e.id))
+
   const finalizar = async () => {
+    if (sinClases.length > 0) return
     setFinalizando(true)
     setErrorFinal(null)
     try {
@@ -105,14 +212,12 @@ export default function Preferencias() {
           })
         }),
       )
-      const resultado = await generarHorarios(ids)
-      setHorarios(resultado)
-      console.info('Horarios generados:', resultado)
+      const estado: EstadoHorarios = { generar: true }
+      navegar(rutaHorarios(ids), { state: estado })
     } catch (error) {
       setErrorFinal(
-        `No pudimos generar los horarios: ${mensajeDe(error)}. Revisa que el servidor esté corriendo e inténtalo de nuevo.`,
+        `No pudimos guardar las preferencias: ${mensajeDeError(error)}`,
       )
-    } finally {
       setFinalizando(false)
     }
   }
@@ -131,6 +236,11 @@ export default function Preferencias() {
       setEstudiantes((lista) => lista.filter((e) => e.id !== id))
       preferencias.current.delete(id)
       eliminados.current.add(id)
+      setConClases((actual) => {
+        const siguiente = new Set(actual)
+        siguiente.delete(id)
+        return siguiente
+      })
     } catch (error) {
       console.error('No se pudo eliminar el estudiante:', error)
     } finally {
@@ -151,6 +261,28 @@ export default function Preferencias() {
         <div inert={nombrando}>
           <Encabezado />
         </div>
+        {recuperando && (
+          <div className="mt-8">
+            {errorRecuperar ? (
+              <AvisoError
+                titulo="No pudimos recuperar el intento"
+                mensaje={errorRecuperar}
+              >
+                <Boton
+                  texto="Reintentar"
+                  icono={iconoRepetir}
+                  variante="panel"
+                  onClick={() => {
+                    setErrorRecuperar(null)
+                    setVecesRecuperar((n) => n + 1)
+                  }}
+                />
+              </AvisoError>
+            ) : (
+              <CargandoIntento />
+            )}
+          </div>
+        )}
         {hayLista && (
           <ul className="mt-7 flex flex-col gap-7.5">
             {estudiantes.map((estudiante, i) => {
@@ -162,6 +294,12 @@ export default function Preferencias() {
                   // Al salir, el margen negativo se come el espacio entre
                   // cartas para que las de abajo suban sin saltos.
                   className={`animate-entrar transition-[margin] duration-300 ease-out ${sale ? '-mb-7.5' : ''}`}
+                  // Las recuperadas entran una tras otra.
+                  style={
+                    iniciales.has(estudiante.id)
+                      ? { animationDelay: `${Math.min(i, 6) * 90}ms` }
+                      : undefined
+                  }
                 >
                   {/* Se desvanece y se pliega (de 1fr a 0fr). */}
                   <div
@@ -176,8 +314,12 @@ export default function Preferencias() {
                         estudiante={estudiante}
                         numero={i + 1}
                         abrirAlMontar={estudiante.id === recienCreado}
+                        preferenciasIniciales={iniciales.get(estudiante.id)}
                         eliminando={sale}
                         onEliminar={() => eliminar(estudiante.id)}
+                        onRenombrar={(nombre) =>
+                          renombrar(estudiante.id, nombre)
+                        }
                         onCambiarPreferencias={cambiarPreferencias}
                       />
                     </div>
@@ -191,23 +333,48 @@ export default function Preferencias() {
                 <NombrarEstudiante
                   numero={estudiantes.length + 1}
                   creando={creando}
+                  error={errorCrear}
                   onConfirmar={crear}
                 />
               </li>
             )}
           </ul>
         )}
-        {!hayLista && (
-          <div
-            className="mt-8 animate-entrar"
-            style={{ animationDelay: '240ms' }}
-          >
-            <EstadoVacio creando={creando} onConfirmar={crear} />
-          </div>
+        {!hayLista && !recuperando && (
+          <>
+            {/* Mientras se carga el ejemplo no se crea a nadie más (y al revés). */}
+            <div
+              inert={cargandoEjemplo}
+              className="mt-8 animate-entrar"
+              style={{ animationDelay: '240ms' }}
+            >
+              <EstadoVacio
+                creando={creando}
+                error={errorCrear}
+                onConfirmar={crear}
+              />
+            </div>
+            <div
+              inert={creando}
+              className="mt-7 animate-entrar"
+              style={{ animationDelay: '360ms' }}
+            >
+              <CargarEjemplo
+                onCargar={cargarEjemplo}
+                cargando={cargandoEjemplo}
+                error={errorEjemplo}
+              />
+            </div>
+          </>
         )}
         {hayLista && !nombrando && (
           <div className="mt-9 animate-entrar escritorio:mx-1.5">
-            <NuevoEstudiante onClick={() => setNombrando(true)} />
+            <NuevoEstudiante
+              onClick={() => {
+                setErrorCrear(null)
+                setNombrando(true)
+              }}
+            />
           </div>
         )}
         {estudiantes.length > 0 && (
@@ -218,6 +385,7 @@ export default function Preferencias() {
             <ConfirmarFinal
               onFinalizar={finalizar}
               finalizando={finalizando}
+              faltanClases={sinClases.map((e) => e.nombre)}
               error={errorFinal}
             />
           </div>

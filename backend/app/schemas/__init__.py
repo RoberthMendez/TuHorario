@@ -1,6 +1,6 @@
 """Schemas de Pydantic: lo que entra y sale por la API (en camelCase, como los tipos de TS)."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
@@ -157,12 +157,119 @@ class ClaseNoAsignadaOut(Esquema):
     prioridad: bool
 
 
-class PreferenciaNoCumplidaOut(Esquema):
-    """Una preferencia que el horario no cumple, con un texto para mostrarle al estudiante."""
+# Preferencias no cumplidas: un esquema por caso (``caso`` dice cuál) con los
+# datos que el front necesita para dibujarlo, además de ``detalle``: el caso en
+# una frase (para lectores de pantalla y textos de ayuda).
 
+
+class EstudianteResumenOut(Esquema):
+    id: int
+    nombre: str
+
+
+class ProfesorCalificadoOut(Esquema):
+    """Profesor de un curso con la calificación que le dio el estudiante (None: no lo calificó)."""
+
+    id: int
+    nombre: str
+    genero: Literal["femenino", "masculino"]
+    nota: int | None = None
+
+
+class TramoOut(Esquema):
+    hora_inicio: str
+    hora_fin: str
+
+
+class ParadaOut(Esquema):
+    """Una clase y el edificio en el que se dicta."""
+
+    clase: ClaseOut
+    edificio: str
+
+
+class _NoCumplida(Esquema):
     tipo: TipoPreferencia
     detalle: str
     id_clase: int | None = None  # clase a la que se refiere (None en cercanía y huecos)
+
+
+class ClaseSinCupoOut(_NoCumplida):
+    caso: Literal["claseSinCupo"] = "claseSinCupo"
+    clase: ClaseOut
+    prioridad: bool
+
+
+class FueraDeFranjaOut(_NoCumplida):
+    caso: Literal["fueraDeFranja"] = "fueraDeFranja"
+    clase: ClaseOut
+    dia: str
+    hora_inicio: str
+    hora_fin: str
+    parcial: bool  # solo una parte de la sesión queda fuera de las franjas
+
+
+class ProfesorVetadoOut(_NoCumplida):
+    caso: Literal["profesorVetado"] = "profesorVetado"
+    clase: ClaseOut
+    profesor: ProfesorCalificadoOut
+
+
+class OtroProfesorOut(_NoCumplida):
+    """Le tocó un profesor con menor calificación que el que prefería."""
+
+    caso: Literal["otroProfesor"] = "otroProfesor"
+    clase: ClaseOut
+    profesor: ProfesorCalificadoOut | None  # None: el curso no tiene profesor
+    preferido: ProfesorCalificadoOut
+
+
+class SinCompaneroOut(_NoCumplida):
+    caso: Literal["sinCompanero"] = "sinCompanero"
+    clase: ClaseOut
+    companero: EstudianteResumenOut
+    # sinClase: no le asignaron la clase; companeroSinClase: el compañero no
+    # quedó en ella; otroCurso: quedaron en cursos distintos.
+    motivo: Literal["sinClase", "companeroSinClase", "otroCurso"]
+    curso: str | None = None  # su curso, si quedó en la clase
+    curso_companero: str | None = None  # el del compañero, si él quedó
+
+
+class ConRestringidoOut(_NoCumplida):
+    caso: Literal["conRestringido"] = "conRestringido"
+    clase: ClaseOut
+    restringido: EstudianteResumenOut
+    curso: str
+
+
+class SinDescansoOut(_NoCumplida):
+    """Dos clases seguidas, sin hora libre, en edificios distintos."""
+
+    caso: Literal["sinDescanso"] = "sinDescanso"
+    dia: str
+    hora: str  # cuando empieza la segunda
+    desde: ParadaOut
+    hasta: ParadaOut
+
+
+class HorasLibresOut(_NoCumplida):
+    caso: Literal["horasLibres"] = "horasLibres"
+    dia: str
+    horas: int
+    tramos: list[TramoOut]
+
+
+PreferenciaNoCumplidaOut = Annotated[
+    ClaseSinCupoOut
+    | FueraDeFranjaOut
+    | ProfesorVetadoOut
+    | OtroProfesorOut
+    | SinCompaneroOut
+    | ConRestringidoOut
+    | SinDescansoOut
+    | HorasLibresOut,
+    Field(discriminator="caso"),
+]
 
 
 class HorarioEstudianteOut(Esquema):

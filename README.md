@@ -82,7 +82,7 @@ El backend necesita PostgreSQL levantado (paso 1). Al arrancar crea las
 tablas que falten (`Base.metadata.create_all`, sin Alembic) y, **solo si la
 base está vacía**, carga los datos semilla (`app/db/semilla.py`):
 
-- las 20 clases y los 28 profesores que antes eran mocks del front (mismos ids);
+- las 20 clases y 38 profesores (al menos 3 por clase; los 28 primeros eran los mocks del front, mismos ids);
 - tipos de documento;
 - 4 edificios con coordenadas y 3 salones cada uno;
 - uno o dos cursos por cada par profesor–clase (cupo de 25 a 40), con sesiones
@@ -99,16 +99,18 @@ Documentación interactiva de la API: http://localhost:8000/docs
 
 #### Endpoints
 
-| Método y ruta | Qué hace |
-|---|---|
-| `GET /clases` | `[{id, codigo, nombre}]` |
-| `GET /profesores?clases=1,7,11` | `[{id, nombre, genero, idsClases}]`, solo los que dictan alguna de esas clases (todos si no se pasa `clases`) |
-| `GET /estudiantes?buscar=seb&limite=5&excluir=3` | `[{id, nombre, correo}]`: busca por nombre o correo sin importar tildes ni mayúsculas |
-| `POST /estudiantes {nombre}` | 201 con el estudiante completo. Genera código `2026` + consecutivo, cédula consecutiva desde 1000000001, correo `inicial + primer apellido + 2 últimas cifras de la cédula @javeriana.edu.co` y celular `310 …`. Los consecutivos no se reutilizan |
-| `DELETE /estudiantes/{id}` | 204. Borra en cascada sus preferencias, inscripciones y las referencias de otros a él |
-| `GET` / `PUT /estudiantes/{id}/preferencias` | Lee o reemplaza todas sus preferencias (ver abajo) |
-| `POST /horarios/generar {idsEstudiantes}` | Corre el algoritmo para esos estudiantes, guarda las inscripciones y devuelve sus horarios |
-| `GET /horarios?estudiantes=1,2,3` | Los mismos horarios, leídos de la base |
+| Método y ruta                                    | Qué hace                                                                                                                                                                                                                                           |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /clases`                                    | `[{id, codigo, nombre}]`                                                                                                                                                                                                                           |
+| `GET /profesores?clases=1,7,11`                  | `[{id, nombre, genero, idsClases}]`, solo los que dictan alguna de esas clases (todos si no se pasa `clases`)                                                                                                                                      |
+| `GET /estudiantes?buscar=seb&limite=5&excluir=3` | `[{id, nombre, correo}]`: busca por nombre o correo sin importar tildes ni mayúsculas                                                                                                                                                              |
+| `POST /estudiantes {nombre}`                     | 201 con el estudiante completo. Genera código `2026` + consecutivo, cédula consecutiva desde 1000000001, correo `inicial + primer apellido + 2 últimas cifras de la cédula @javeriana.edu.co` y celular `310 …`. Los consecutivos no se reutilizan |
+| `GET /estudiantes/{id}`                          | El estudiante completo (404 si no existe)                                                                                                                                                                                                          |
+| `DELETE /estudiantes/{id}`                       | 204. Borra en cascada sus preferencias, inscripciones y las referencias de otros a él                                                                                                                                                              |
+| `GET` / `PUT /estudiantes/{id}/preferencias`     | Lee o reemplaza todas sus preferencias (ver abajo)                                                                                                                                                                                                 |
+| `POST /horarios/generar {idsEstudiantes}`        | Corre el algoritmo para esos estudiantes, guarda las inscripciones y devuelve sus horarios                                                                                                                                                         |
+| `GET /horarios?estudiantes=1,2,3`                | Los mismos horarios, leídos de la base                                                                                                                                                                                                             |
+| `POST /ejemplo`                                  | Crea los 10 estudiantes del ejemplo de la sustentación con sus preferencias (ver abajo) y borra los de una carga anterior. 201 con la lista                                                                                                        |
 
 Cuerpo de `PUT /estudiantes/{id}/preferencias`. Los días van con tilde, como
 en el front, y las horas en punto entre `07:00` y `21:00`:
@@ -116,7 +118,9 @@ en el front, y las horas en punto entre `07:00` y `21:00`:
 ```json
 {
   "clases": [{ "idClase": 1, "prioridad": true }],
-  "franjasHabilitadas": [{ "dia": "miércoles", "horaInicio": "07:00", "horaFin": "10:00" }],
+  "franjasHabilitadas": [
+    { "dia": "miércoles", "horaInicio": "07:00", "horaFin": "10:00" }
+  ],
   "profesores": [{ "idProfesor": 2, "preferencia": 3 }],
   "companeros": [{ "idEstudiante": 5, "idClase": 1 }],
   "restringidos": [7],
@@ -126,8 +130,7 @@ en el front, y las horas en punto entre `07:00` y `21:00`:
 }
 ```
 
-`tipoPreferencia` ∈ `clases, profesores, estudiantes, horarios, cercania,
-huecos`. Las reglas de negocio que no se cumplen responden 400 con un
+`tipoPreferencia` ∈ `clases, profesores, estudiantes, horarios, cercania, huecos`. Las reglas de negocio que no se cumplen responden 400 con un
 `detail`; un recurso inexistente responde 404.
 
 - Un profesor calificado debe dictar alguna clase pedida.
@@ -136,27 +139,40 @@ huecos`. Las reglas de negocio que no se cumplen responden 400 con un
 - El ranking va de 1 a n y solo incluye preferencias elegidas.
 
 Respuesta de horarios, por estudiante:
-`{idEstudiante, nombre, cursos: [{id, codigo, clase, profesor, sesiones:
-[{dia, horaInicio, horaFin, salon: {codigo, edificio}}]}], clasesNoAsignadas:
-[{clase, prioridad}], preferenciasNoCumplidas: [{tipo, detalle, idClase}]}`.
+`{idEstudiante, nombre, cursos: [{id, codigo, clase, profesor, sesiones: [{dia, horaInicio, horaFin, salon: {codigo, edificio}}]}], clasesNoAsignadas: [{clase, prioridad}], preferenciasNoCumplidas: [{tipo, caso, detalle, idClase, …datos del caso}]}`.
 
 `preferenciasNoCumplidas` lista todas las preferencias que el horario no
-cumple (`app/services/cumplimiento_service.py`), con un `detalle` listo para
-mostrar e `idClase` cuando se refiere a una clase (`null` en cercanía y
-huecos). Se calcula desde la base, así que `GET /horarios` también la trae:
+cumple (`app/services/cumplimiento_service.py`). Cada una trae su `tipo`, un
+`caso` con los datos para dibujarla en el front, `detalle` (el caso en una
+frase, para lectores de pantalla) e `idClase` cuando se refiere a una clase
+(`null` en cercanía y huecos). Se calcula desde la base, así que
+`GET /horarios` también la trae:
 
-| `tipo` | Se reporta cuando… |
-|---|---|
-| `clases` | una clase pedida no quedó inscrita |
-| `horarios` | una sesión cae (toda o en parte) fuera de las franjas habilitadas; sin franjas no se reporta |
-| `profesores` | le tocó un profesor vetado (0) o uno con menor calificación que el mejor calificado (1–3) de los que dictan esa clase |
-| `estudiantes` | no quedó en el mismo curso que un compañero pedido, o quedó en el mismo curso que alguien restringido |
-| `cercania` | con cercanía activada: dos clases seguidas (sin hora libre) en edificios distintos |
-| `huecos` | con "sin huecos" activado: horas libres entre la primera y la última clase de un día (una entrada por día) |
+| `caso` (`tipo`)                  | Datos                                                           | Se reporta cuando…                                                                                                                     |
+| -------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `claseSinCupo` (`clases`)        | `clase, prioridad`                                              | una clase pedida no quedó inscrita                                                                                                     |
+| `fueraDeFranja` (`horarios`)     | `clase, dia, horaInicio, horaFin, parcial`                      | una sesión cae (toda o en parte) fuera de las franjas habilitadas; sin franjas no se reporta                                           |
+| `profesorVetado` (`profesores`)  | `clase, profesor: {id, nombre, genero, nota}`                   | le tocó un profesor vetado (0)                                                                                                         |
+| `otroProfesor` (`profesores`)    | `clase, profesor` (o `null` si el curso no tiene), `preferido`  | le tocó uno con menor calificación que el mejor calificado (1–3) de los que dictan esa clase                                           |
+| `sinCompanero` (`estudiantes`)   | `clase, companero: {id, nombre}, motivo, curso, cursoCompanero` | no quedó en el mismo curso que un compañero pedido; `motivo`: `sinClase` (no le asignaron la clase), `companeroSinClase` u `otroCurso` |
+| `conRestringido` (`estudiantes`) | `clase, restringido: {id, nombre}, curso`                       | quedó en el mismo curso que alguien restringido                                                                                        |
+| `sinDescanso` (`cercania`)       | `dia, hora, desde, hasta` (cada uno `{clase, edificio}`)        | con cercanía activada: dos clases seguidas (sin hora libre) en edificios distintos                                                     |
+| `horasLibres` (`huecos`)         | `dia, horas, tramos: [{horaInicio, horaFin}]`                   | con "sin huecos" activado: horas libres entre la primera y la última clase de un día (una entrada por día)                             |
 
-Al generar, el cupo disponible de cada curso es `cupo − inscritos que no
-están en esta corrida`, y las inscripciones anteriores de los estudiantes de
+Al generar, el cupo disponible de cada curso es `cupo − inscritos que no están en esta corrida`, y las inscripciones anteriores de los estudiantes de
 la corrida se reemplazan.
+
+#### Ejemplo de la sustentación
+
+En Preferencias, con la página vacía, **Cargar ejemplo** (`POST /ejemplo`)
+crea 10 estudiantes con preferencias fijas (`app/db/ejemplo.py`) y los muestra
+sin finalizar, para revisarlos o editarlos. Entre todos usan todas las
+preferencias y, si se generan solos y en ese orden, el resultado es siempre el
+mismo: a Camila Suárez se le cumple todo y aparecen todos los casos de la tabla
+anterior menos `profesorVetado`, que el algoritmo nunca produce (descarta los
+cursos de un profesor vetado). `tests/test_ejemplo.py` lo comprueba. Al volver
+a cargarlo se borran los estudiantes de la carga anterior (los que se llamen
+igual), para que sus inscripciones no les quiten cupos a los nuevos.
 
 ### 3. Frontend
 

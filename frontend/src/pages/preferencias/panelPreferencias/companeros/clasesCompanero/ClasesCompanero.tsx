@@ -3,7 +3,7 @@ import type {
   PreferenciaClase,
 } from '../../../../../types/Preferencias'
 import CajaSubseccion from '../../CajaSubseccion'
-import { primerNombre } from '../iniciales'
+import { primerNombre } from '../../../../../components/avatarCompanero/iniciales'
 import BotonListo from './BotonListo'
 import SinCompaneros from './SinCompaneros'
 import TarjetaClaseCompanero from './TarjetaClaseCompanero'

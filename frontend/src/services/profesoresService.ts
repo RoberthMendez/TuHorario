@@ -8,8 +8,14 @@ import { obtenerJson } from './api'
  *     →  200 [{ "id": 1, "nombre": "…", "genero": "femenino",
  *               "idsClases": [1, 2] }, …]
  *
- * Devuelve solo los profesores que dictan al menos una de esas clases.
+ * Con `clases` devuelve solo los profesores que dictan al menos una de esas
+ * clases; sin `clases`, todos.
  */
+
+/** Todos los profesores (para recuperar las preferencias de un intento). */
+export function obtenerProfesores(signal?: AbortSignal): Promise<Profesor[]> {
+  return obtenerJson<Profesor[]>('/profesores', { signal })
+}
 
 /** Profesores que dictan alguna de las clases indicadas. */
 export function obtenerProfesoresDeClases(
