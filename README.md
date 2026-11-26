@@ -110,7 +110,8 @@ Documentación interactiva de la API: http://localhost:8000/docs
 | `GET` / `PUT /estudiantes/{id}/preferencias`     | Lee o reemplaza todas sus preferencias (ver abajo)                                                                                                                                                                                                 |
 | `POST /horarios/generar {idsEstudiantes}`        | Corre el algoritmo para esos estudiantes, guarda las inscripciones y devuelve sus horarios                                                                                                                                                         |
 | `GET /horarios?estudiantes=1,2,3`                | Los mismos horarios, leídos de la base                                                                                                                                                                                                             |
-| `POST /ejemplo`                                  | Crea los 10 estudiantes del ejemplo de la sustentación con sus preferencias (ver abajo) y borra los de una carga anterior. 201 con la lista                                                                                                        |
+| `GET /ejemplos`                                  | `[{clave, titulo, descripcion, cantidadEstudiantes}]`: los ejemplos de la sustentación (`completo`, `nivel-1` … `nivel-8`, ver abajo)                                                                                                              |
+| `POST /ejemplos/{clave}`                         | Crea los estudiantes de ese ejemplo con sus preferencias y borra los de una carga anterior de cualquier ejemplo. 201 con la lista (404 si la clave no existe)                                                                                      |
 
 Cuerpo de `PUT /estudiantes/{id}/preferencias`. Los días van con tilde, como
 en el front, y las horas en punto entre `07:00` y `21:00`:
@@ -162,17 +163,40 @@ frase, para lectores de pantalla) e `idClase` cuando se refiere a una clase
 Al generar, el cupo disponible de cada curso es `cupo − inscritos que no están en esta corrida`, y las inscripciones anteriores de los estudiantes de
 la corrida se reemplazan.
 
-#### Ejemplo de la sustentación
+#### Ejemplos de la sustentación
 
-En Preferencias, con la página vacía, **Cargar ejemplo** (`POST /ejemplo`)
-crea 10 estudiantes con preferencias fijas (`app/db/ejemplo.py`) y los muestra
-sin finalizar, para revisarlos o editarlos. Entre todos usan todas las
-preferencias y, si se generan solos y en ese orden, el resultado es siempre el
-mismo: a Camila Suárez se le cumple todo y aparecen todos los casos de la tabla
-anterior menos `profesorVetado`, que el algoritmo nunca produce (descarta los
-cursos de un profesor vetado). `tests/test_ejemplo.py` lo comprueba. Al volver
-a cargarlo se borran los estudiantes de la carga anterior (los que se llamen
-igual), para que sus inscripciones no les quiten cupos a los nuevos.
+En Preferencias, con la página vacía, **Cargar ejemplo** abre un modal para
+elegir un ejemplo (`GET /ejemplos`). Al elegirlo (`POST /ejemplos/{clave}`) se
+crean sus estudiantes con preferencias fijas (`app/db/ejemplos.py`) y se
+muestran sin finalizar, para revisarlos o editarlos. Si se generan solos y en
+ese orden, el resultado es siempre el mismo (`tests/test_ejemplos.py` lo
+comprueba):
+
+- **Ejemplo completo**: 10 estudiantes que entre todos usan todas las
+  preferencias. A Camila Suárez se le cumple todo y aparecen todos los casos de
+  la tabla anterior menos `profesorVetado`, que el algoritmo nunca produce
+  (descarta los cursos de un profesor vetado).
+- **Nivel 1 a Nivel 8**: uno por cada nivel del documento, con lo mínimo para
+  ver lo que agrega ese nivel. Casi todos tienen un estudiante "de control" que
+  pide lo mismo sin la preferencia del nivel:
+
+| Ejemplo                                | Qué se ve                                                                                                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nivel 1 · Clases y cupos               | A Química le queda 1 cupo y la piden 2: uno se queda sin ella; nadie recibe cursos llenos ni cruces                                                                                |
+| Nivel 2 · Prioridad de las clases      | El único cupo de Química es para quien la marcó prioritaria (con cualquier orden); Ética (prioritaria) le gana a Inglés cuando se cruzan                                           |
+| Nivel 3 · Franjas horarias             | "Solo mañanas" y "nada después de las 6 p. m." eligen el curso que encaja; si ninguno encaja, el que más se acerca; la franja no impide asignar                                    |
+| Nivel 4 · Profesores                   | Dos compiten por el último cupo con Lucía Fernández (3): uno baja a su segundo (2), nadie recibe al vetado (0); quien vetó a todos se queda sin la clase                           |
+| Nivel 5 · Compañeros                   | Dos que se pidieron en Análisis quedan juntos ahí y no en Inglés (es por clase); quien restringió a otro queda en otra sección                                                     |
+| Nivel 6 · Cercanía                     | Clases seguidas el viernes: con cercanía se queda en el mismo edificio; sin ella cruza el campus                                                                                   |
+| Nivel 7 · Sin huecos                   | Con la preferencia, Ética queda justo antes de Proyecto de Grado; sin ella, con una hora libre                                                                                     |
+| Nivel 8 · Prioridad entre preferencias | Mismas preferencias, distinto ranking: profesores primero → Lucía de noche; franjas primero → Hernán en la mañana; compañeros primero → con su amiga aunque sea fuera de su franja |
+
+Como todos los cursos del catálogo tienen 25 cupos o más, los ejemplos que
+necesitan cursos llenos crean **ocupantes** ("Ocupante 1", "Ocupante 2"…):
+estudiantes ya inscritos en esos cursos que no entran en la corrida y solo
+ocupan cupo. Al cargar cualquier ejemplo se borran los estudiantes de todos los
+ejemplos y los ocupantes (los que se llamen igual), para que sus inscripciones
+no les quiten cupos a los nuevos.
 
 ### 3. Frontend
 

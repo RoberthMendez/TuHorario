@@ -66,5 +66,12 @@ def cursos_de_clases(db: Session, ids_clases: set[int]) -> list[Curso]:
     return list(db.scalars(consulta))
 
 
+def cursos_por_codigos(db: Session, codigos: set[str]) -> dict[str, Curso]:
+    """código → curso (solo los que existen)."""
+    if not codigos:
+        return {}
+    return {c.codigo: c for c in db.scalars(select(Curso).where(Curso.codigo.in_(codigos)))}
+
+
 def tipo_documento(db: Session, tipo: str) -> TipoDocumento | None:
     return db.scalar(select(TipoDocumento).where(TipoDocumento.tipo == tipo))

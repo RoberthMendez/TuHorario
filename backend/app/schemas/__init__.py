@@ -64,6 +64,16 @@ class CompaneroOut(Esquema):
     correo: str
 
 
+# ---------- Ejemplos de la sustentación ----------
+
+
+class EjemploOut(Esquema):
+    clave: str
+    titulo: str
+    descripcion: str
+    cantidad_estudiantes: int
+
+
 # ---------- Preferencias ----------
 
 TipoPreferencia = Literal["horarios", "profesores", "estudiantes", "clases", "cercania", "huecos"]

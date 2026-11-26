@@ -7,7 +7,7 @@ import FondoCuadricula from '../../components/FondoCuadricula'
 import Logo from '../../components/Logo'
 import { idsDeTexto, rutaHorarios, type EstadoHorarios } from '../../rutas'
 import { mensajeDeError } from '../../services/api'
-import { crearEjemplo } from '../../services/ejemploService'
+import { crearEjemplo } from '../../services/ejemplosService'
 import {
   crearEstudiante,
   eliminarEstudiante,
@@ -44,9 +44,9 @@ import { recuperarIntento, type Intento } from './recuperarIntento'
  * llega con ellos ("Repetir intento", "atrás" desde Horarios o una recarga),
  * se recuperan del backend con sus preferencias guardadas.
  *
- * Debajo de la bienvenida, "Cargar ejemplo" crea en el backend los 10
- * estudiantes del ejemplo de la sustentación y los muestra igual que un
- * intento recuperado; no finaliza.
+ * Debajo de la bienvenida, "Cargar ejemplo" abre un modal para elegir un
+ * ejemplo de la sustentación (el completo o uno por nivel); el backend crea
+ * sus estudiantes y se muestran igual que un intento recuperado; no finaliza.
  *
  * "Finalizar" guarda las preferencias de cada estudiante en el backend y va a
  * Horarios, que corre el algoritmo. No se puede finalizar mientras algún
@@ -90,7 +90,7 @@ export default function Preferencias() {
   const [eliminando, setEliminando] = useState<number[]>([])
   const [finalizando, setFinalizando] = useState(false)
   const [errorFinal, setErrorFinal] = useState<string | null>(null)
-  const [cargandoEjemplo, setCargandoEjemplo] = useState(false)
+  const [cargandoEjemplo, setCargandoEjemplo] = useState<string | null>(null)
   const [errorEjemplo, setErrorEjemplo] = useState<string | null>(null)
   // Preferencias de cada estudiante (por id), tal como las arma su panel. No
   // se pintan: solo se envían al finalizar, así que no hace falta re-render.
@@ -174,16 +174,16 @@ export default function Preferencias() {
   }
 
   // Solo se ofrece con la página vacía, así que reemplaza la lista.
-  const cargarEjemplo = async () => {
-    setCargandoEjemplo(true)
+  const cargarEjemplo = async (clave: string) => {
+    setCargandoEjemplo(clave)
     setErrorEjemplo(null)
     try {
-      const creados = await crearEjemplo()
+      const creados = await crearEjemplo(clave)
       mostrarIntento(await recuperarIntento(creados.map((e) => e.id)))
     } catch (error) {
       setErrorEjemplo(`No pudimos cargar el ejemplo: ${mensajeDeError(error)}`)
     } finally {
-      setCargandoEjemplo(false)
+      setCargandoEjemplo(null)
     }
   }
 
@@ -344,7 +344,7 @@ export default function Preferencias() {
           <>
             {/* Mientras se carga el ejemplo no se crea a nadie más (y al revés). */}
             <div
-              inert={cargandoEjemplo}
+              inert={cargandoEjemplo !== null}
               className="mt-8 animate-entrar"
               style={{ animationDelay: '240ms' }}
             >

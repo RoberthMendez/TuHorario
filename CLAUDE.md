@@ -23,7 +23,7 @@ documento de la primera entrega, con los TADs, está en `docs/`.
   - `services/`: la lógica de negocio.
   - `repositories/`: todas las consultas con SQLAlchemy 2.x; los servicios no escriben SQL.
   - `models/` (ORM) y `schemas/` (Pydantic, camelCase con `alias_generator=to_camel`).
-  - `db/`: engine, `SessionLocal`, `Base`, `get_db`, `semilla.py` y `ejemplo.py`.
+  - `db/`: engine, `SessionLocal`, `Base`, `get_db`, `semilla.py` y `ejemplos.py`.
   - `core/`: `config.py`, `errores.py` (`NoEncontrado` → 404, `ReglaNegocio` → 400, `Conflicto` → 409) y `dias.py`.
   - `main.py`.
 - `backend/tests/` — tests con pytest sobre SQLite en memoria (`conftest.py` sobreescribe `get_db`).
@@ -62,11 +62,15 @@ cd algoritmo && pytest
   `frontend/src/data/` solo quedan datos fijos de la vista (semana, niveles,
   horario de ejemplo de la Landing).
 - Endpoints, cuerpo de las preferencias y datos semilla: ver `README.md`.
-- Ejemplo de la sustentación ("Cargar ejemplo" en Preferencias vacía,
-  `POST /ejemplo`): 10 estudiantes fijos en `app/db/ejemplo.py`, con ids del
-  catálogo semilla. `tests/test_ejemplo.py` exige que su resultado muestre
-  todos los casos; si cambian la semilla o el algoritmo, correrlo y ajustar
-  el ejemplo.
+- Ejemplos de la sustentación ("Cargar ejemplo" en Preferencias vacía abre un
+  modal; `GET /ejemplos` y `POST /ejemplos/{clave}`): el completo (10
+  estudiantes) y uno por nivel, fijos en `app/db/ejemplos.py`, con ids y
+  códigos del catálogo semilla. Los que necesitan cursos llenos crean
+  "ocupantes" ya inscritos. `tests/test_ejemplos.py` exige que el completo
+  muestre todos los casos y que cada nivel muestre lo suyo; si cambian la
+  semilla o el algoritmo, correrlo y ajustar los ejemplos. Cada estudiante
+  guarda un ranking con todas sus preferencias elegidas (el front siempre lo
+  manda completo al finalizar).
 - Base de datos: las tablas se crean con `Base.metadata.create_all` en el
   `lifespan` y el catálogo (clases, profesores, edificios, salones, cursos) se
   siembra solo si la base está vacía (`app/db/semilla.py`). Para cambiar el
